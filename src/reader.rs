@@ -10,7 +10,7 @@ pub struct Article {
 }
 
 fn create_client(user_agent: Option<&str>) -> Result<Client> {
-    let ua = user_agent.unwrap_or("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36");
+    let ua = user_agent.unwrap_or("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
     Client::builder()
         .user_agent(ua)
         .timeout(std::time::Duration::from_secs(30))
@@ -60,12 +60,23 @@ fn try_googlebot_ua(url_str: &str) -> Result<Article> {
 
 fn fetch_direct(url_str: &str, user_agent: Option<&str>) -> Result<Article> {
     let client = create_client(user_agent)?;
-    let response = client.get(url_str).send()?;
+    let response = client.get(url_str).send()
+        .map_err(|e| anyhow::anyhow!("Failed to fetch article: {}. Try enabling paywall_remover in config.", e))?;
+
+    let status = response.status();
+    if !status.is_success() {
+        anyhow::bail!(
+            "Access denied (HTTP {}). Enable 'paywall_remover: true' in ~/.config/miam/config.yml to bypass restrictions.",
+            status.as_u16()
+        );
+    }
+
     let html = response.text()?;
 
     let url = Url::parse(url_str)?;
     let mut cursor = Cursor::new(html);
-    let product = extractor::extract(&mut cursor, &url)?;
+    let product = extractor::extract(&mut cursor, &url)
+        .map_err(|e| anyhow::anyhow!("Failed to parse article: {}. Try enabling paywall_remover in config.", e))?;
 
     let content = html_to_text(&product.content);
 

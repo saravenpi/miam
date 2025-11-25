@@ -20,11 +20,15 @@ pub struct Settings {
     pub invidious_instance: Option<String>,
     #[serde(default = "default_show_tooltips")]
     pub show_tooltips: bool,
-    #[serde(default)]
+    #[serde(default = "default_paywall_remover")]
     pub paywall_remover: bool,
 }
 
 fn default_show_tooltips() -> bool {
+    true
+}
+
+fn default_paywall_remover() -> bool {
     true
 }
 
