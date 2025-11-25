@@ -7,6 +7,7 @@ mod ui;
 
 use anyhow::Result;
 use app::App;
+use clap::{Parser, Subcommand};
 use crossterm::{
     event::{self, DisableMouseCapture, EnableMouseCapture, Event, KeyCode, KeyModifiers},
     execute,
@@ -16,6 +17,22 @@ use feed::FeedItem;
 use ratatui::{backend::CrosstermBackend, Terminal};
 use std::sync::mpsc;
 use std::{io, thread, time::Duration};
+
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+#[derive(Parser)]
+#[command(name = "miam")]
+#[command(about = "A minimalist RSS feed reader TUI", long_about = None)]
+#[command(version = VERSION)]
+struct Cli {
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    Upgrade,
+}
 
 enum LoadResult {
     Items(Vec<FeedItem>),
@@ -27,6 +44,15 @@ enum LoadResult {
 }
 
 fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    match cli.command {
+        Some(Commands::Upgrade) => {
+            return upgrade();
+        }
+        None => {}
+    }
+
     enable_raw_mode()?;
     let mut stdout = io::stdout();
     execute!(stdout, EnterAlternateScreen, EnableMouseCapture)?;
@@ -56,6 +82,27 @@ fn main() -> Result<()> {
 
     if let Err(err) = res {
         eprintln!("Error: {err:?}");
+    }
+
+    Ok(())
+}
+
+fn upgrade() -> Result<()> {
+    println!("Checking for updates...");
+
+    let status = self_update::backends::github::Update::configure()
+        .repo_owner("saravenpi")
+        .repo_name("miam")
+        .bin_name("miam")
+        .show_download_progress(true)
+        .current_version(VERSION)
+        .build()?
+        .update()?;
+
+    if status.updated() {
+        println!("Successfully updated to version {}", status.version());
+    } else {
+        println!("Already up to date (version {})", VERSION);
     }
 
     Ok(())

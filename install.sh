@@ -78,10 +78,6 @@ check_prerequisites() {
     if ! command_exists curl && ! command_exists wget; then
         error "Neither curl nor wget found. Please install one of them."
     fi
-
-    if ! command_exists tar; then
-        error "tar is required but not found. Please install tar."
-    fi
 }
 
 # Get the latest release version
@@ -95,37 +91,29 @@ get_latest_version() {
     fi
 }
 
-# Download and extract binary
+# Download binary
 download_binary() {
     local version="$1"
     local platform="$2"
-    local download_url="https://github.com/${REPO}/releases/download/${version}/${BINARY_NAME}-${platform}.tar.gz"
-    local tmp_dir
-
-    tmp_dir="$(mktemp -d)"
+    local download_url="https://github.com/${REPO}/releases/download/${version}/${BINARY_NAME}-${platform}"
 
     info "Downloading ${BINARY_NAME} ${version} for ${platform}..."
 
+    mkdir -p "${INSTALL_DIR}"
+
     if command_exists curl; then
-        curl -sSL "$download_url" -o "${tmp_dir}/${BINARY_NAME}.tar.gz" || {
+        curl -sSL "$download_url" -o "${INSTALL_DIR}/${BINARY_NAME}" || {
             warn "Pre-built binary not available for ${platform}"
             return 1
         }
     elif command_exists wget; then
-        wget -qO "${tmp_dir}/${BINARY_NAME}.tar.gz" "$download_url" || {
+        wget -qO "${INSTALL_DIR}/${BINARY_NAME}" "$download_url" || {
             warn "Pre-built binary not available for ${platform}"
             return 1
         }
     fi
 
-    info "Extracting binary..."
-    tar -xzf "${tmp_dir}/${BINARY_NAME}.tar.gz" -C "${tmp_dir}"
-
-    mkdir -p "${INSTALL_DIR}"
-    mv "${tmp_dir}/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}"
     chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
-
-    rm -rf "${tmp_dir}"
 
     return 0
 }

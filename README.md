@@ -87,6 +87,28 @@ miam
 5. Use `Tab` to switch between feeds and articles
 6. Press `o` to open an article
 
+## Commands
+
+### Check Version
+
+```bash
+miam --version
+```
+
+### Upgrade to Latest Version
+
+Miam includes a built-in self-update mechanism that downloads the latest release from GitHub:
+
+```bash
+miam upgrade
+```
+
+This will:
+- Check for the latest release on GitHub
+- Download and install the new version if available
+- Show a progress bar during download
+- Replace the current binary with the new version
+
 ## Configuration
 
 miam uses a YAML configuration file located at `~/.miam.yml`.
