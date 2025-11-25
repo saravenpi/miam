@@ -26,4 +26,8 @@ pub fn render(f: &mut Frame, app: &App) {
     if app.filter_mode {
         dialogs::render_filter_dialog(f, app);
     }
+
+    if app.tag_editor_mode {
+        dialogs::render_tag_editor(f, app);
+    }
 }

@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 pub struct FeedSource {
     pub name: String,
     pub url: String,
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

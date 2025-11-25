@@ -277,7 +277,17 @@ fn run_app<B: ratatui::backend::Backend>(
                     continue;
                 }
 
-                if app.filter_mode {
+                if app.tag_editor_mode {
+                    match key.code {
+                        KeyCode::Enter => app.submit_tags(),
+                        KeyCode::Esc => app.cancel_tag_editor(),
+                        KeyCode::Char(c) => app.tag_input.push(c),
+                        KeyCode::Backspace => {
+                            app.tag_input.pop();
+                        }
+                        _ => {}
+                    }
+                } else if app.filter_mode {
                     match key.code {
                         KeyCode::Enter | KeyCode::Esc => app.cancel_filter(),
                         KeyCode::Char(c) => {
@@ -347,8 +357,15 @@ fn run_app<B: ratatui::backend::Backend>(
                                     spawn_refresh_single(source, tx.clone());
                                 }
                                 app.focus = app::Focus::Items;
+                            } else if app.focus == app::Focus::Tags {
+                                app.select_tag();
                             } else if app.focus == app::Focus::Items {
                                 app.open_selected();
+                            }
+                        }
+                        KeyCode::Char('t') => {
+                            if app.focus == app::Focus::Feeds {
+                                app.start_tag_editor();
                             }
                         }
                         KeyCode::Char('a') => app.start_add_feed(),

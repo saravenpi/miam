@@ -32,9 +32,16 @@ pub struct Config {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(untagged)]
+enum FeedEntry {
+    Simple(String),
+    WithTags { url: String, tags: Vec<String> },
+}
+
+#[derive(Serialize, Deserialize)]
 struct ConfigFile {
     #[serde(default)]
-    feeds: IndexMap<String, String>,
+    feeds: IndexMap<String, FeedEntry>,
     #[serde(default)]
     settings: Settings,
 }
@@ -52,7 +59,14 @@ impl Config {
             let sources = config_file
                 .feeds
                 .into_iter()
-                .map(|(name, url)| FeedSource { name, url })
+                .map(|(name, entry)| match entry {
+                    FeedEntry::Simple(url) => FeedSource {
+                        name,
+                        url,
+                        tags: Vec::new(),
+                    },
+                    FeedEntry::WithTags { url, tags } => FeedSource { name, url, tags },
+                })
                 .collect();
             return Some(Config {
                 sources,
@@ -63,7 +77,11 @@ impl Config {
         let map: IndexMap<String, String> = serde_yaml::from_str(&content).ok()?;
         let sources = map
             .into_iter()
-            .map(|(name, url)| FeedSource { name, url })
+            .map(|(name, url)| FeedSource {
+                name,
+                url,
+                tags: Vec::new(),
+            })
             .collect();
         Some(Config {
             sources,
@@ -73,10 +91,20 @@ impl Config {
 
     pub fn save(&self) {
         if let Some(path) = Self::config_path() {
-            let feeds: IndexMap<String, String> = self
+            let feeds: IndexMap<String, FeedEntry> = self
                 .sources
                 .iter()
-                .map(|s| (s.name.clone(), s.url.clone()))
+                .map(|s| {
+                    let entry = if s.tags.is_empty() {
+                        FeedEntry::Simple(s.url.clone())
+                    } else {
+                        FeedEntry::WithTags {
+                            url: s.url.clone(),
+                            tags: s.tags.clone(),
+                        }
+                    };
+                    (s.name.clone(), entry)
+                })
                 .collect();
             let config_file = ConfigFile {
                 feeds,

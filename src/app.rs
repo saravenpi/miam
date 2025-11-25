@@ -1,12 +1,14 @@
 use crate::config::Config;
 use crate::feed::{FeedItem, FeedSource};
 use crate::reader::Article;
+use std::collections::HashSet;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Focus {
     Feeds,
     Items,
     Reader,
+    Tags,
 }
 
 use ratatui::widgets::ListState;
@@ -35,6 +37,11 @@ pub struct App {
     pub filter_mode: bool,
     pub filter: String,
     pub show_tooltips: bool,
+    pub tag_editor_mode: bool,
+    pub tag_input: String,
+    pub selected_tag: Option<String>,
+    pub tag_index: usize,
+    pub tag_list_state: ListState,
 }
 
 impl App {
@@ -43,6 +50,8 @@ impl App {
         feed_list_state.select(Some(0));
         let mut item_list_state = ListState::default();
         item_list_state.select(Some(0));
+        let mut tag_list_state = ListState::default();
+        tag_list_state.select(Some(0));
 
         Self {
             sources: Vec::new(),
@@ -68,6 +77,11 @@ impl App {
             filter_mode: false,
             filter: String::new(),
             show_tooltips: true,
+            tag_editor_mode: false,
+            tag_input: String::new(),
+            selected_tag: None,
+            tag_index: 0,
+            tag_list_state,
         }
     }
 
@@ -80,6 +94,10 @@ impl App {
             Focus::Items => {
                 self.item_index = 0;
                 self.item_list_state.select(Some(0));
+            }
+            Focus::Tags => {
+                self.tag_index = 0;
+                self.tag_list_state.select(Some(0));
             }
             Focus::Reader => {}
         }
@@ -99,6 +117,13 @@ impl App {
                 if len > 0 {
                     self.item_index = len - 1;
                     self.item_list_state.select(Some(self.item_index));
+                }
+            }
+            Focus::Tags => {
+                let len = self.get_all_tags().len();
+                if len > 0 {
+                    self.tag_index = len - 1;
+                    self.tag_list_state.select(Some(self.tag_index));
                 }
             }
             Focus::Reader => {}
@@ -175,6 +200,13 @@ impl App {
                     self.item_list_state.select(Some(self.item_index));
                 }
             }
+            Focus::Tags => {
+                let len = self.get_all_tags().len();
+                if len > 0 {
+                    self.tag_index = (self.tag_index + 1) % len;
+                    self.tag_list_state.select(Some(self.tag_index));
+                }
+            }
             Focus::Reader => {}
         }
     }
@@ -198,13 +230,21 @@ impl App {
                     self.item_list_state.select(Some(self.item_index));
                 }
             }
+            Focus::Tags => {
+                let len = self.get_all_tags().len();
+                if len > 0 {
+                    self.tag_index = self.tag_index.checked_sub(1).unwrap_or(len - 1);
+                    self.tag_list_state.select(Some(self.tag_index));
+                }
+            }
             Focus::Reader => {}
         }
     }
 
     pub fn toggle_focus(&mut self) {
         self.focus = match self.focus {
-            Focus::Feeds => Focus::Items,
+            Focus::Feeds => Focus::Tags,
+            Focus::Tags => Focus::Items,
             Focus::Items => Focus::Feeds,
             Focus::Reader => Focus::Items,
         };
@@ -236,6 +276,7 @@ impl App {
                 name
             },
             url,
+            tags: Vec::new(),
         };
         self.sources.push(source);
         self.save_config();
@@ -253,6 +294,7 @@ impl App {
         match self.focus {
             Focus::Feeds => self.status = "Filter feeds:".to_string(),
             Focus::Items => self.status = "Filter items:".to_string(),
+            Focus::Tags => self.status = "Filter tags:".to_string(),
             Focus::Reader => {}
         }
     }
@@ -392,5 +434,114 @@ impl App {
             }
         }
         url.to_string()
+    }
+
+    pub fn get_all_tags(&self) -> Vec<String> {
+        let mut tags: HashSet<String> = HashSet::new();
+        for source in &self.sources {
+            for tag in &source.tags {
+                tags.insert(tag.clone());
+            }
+        }
+        let mut sorted_tags: Vec<String> = tags.into_iter().collect();
+        sorted_tags.sort();
+        sorted_tags
+    }
+
+    pub fn start_tag_editor(&mut self) {
+        if self.focus == Focus::Feeds {
+            let idx = if self.show_all && self.feed_index > 0 {
+                self.feed_index - 1
+            } else if !self.show_all {
+                self.feed_index
+            } else {
+                return;
+            };
+
+            if idx < self.sources.len() {
+                self.tag_editor_mode = true;
+                self.tag_input.clear();
+                self.status = format!(
+                    "Add tags to '{}' (comma-separated):",
+                    self.sources[idx].name
+                );
+            }
+        }
+    }
+
+    pub fn submit_tags(&mut self) {
+        if self.tag_input.is_empty() {
+            self.cancel_tag_editor();
+            return;
+        }
+
+        let idx = if self.show_all && self.feed_index > 0 {
+            self.feed_index - 1
+        } else if !self.show_all {
+            self.feed_index
+        } else {
+            self.cancel_tag_editor();
+            return;
+        };
+
+        if idx < self.sources.len() {
+            let new_tags: Vec<String> = self.tag_input
+                .split(',')
+                .map(|s| s.trim().to_string())
+                .filter(|s| !s.is_empty())
+                .collect();
+
+            for tag in new_tags {
+                if !self.sources[idx].tags.contains(&tag) {
+                    self.sources[idx].tags.push(tag);
+                }
+            }
+
+            self.save_config();
+            self.status = "Tags added".to_string();
+        }
+
+        self.cancel_tag_editor();
+    }
+
+    pub fn cancel_tag_editor(&mut self) {
+        self.tag_editor_mode = false;
+        self.tag_input.clear();
+        self.status.clear();
+    }
+
+    pub fn select_tag(&mut self) {
+        if self.focus == Focus::Tags {
+            let tags = self.get_all_tags();
+            if self.tag_index < tags.len() {
+                let tag = tags[self.tag_index].clone();
+                self.selected_tag = Some(tag.clone());
+                self.items = self.get_items_by_tag(&tag);
+                self.item_index = 0;
+                self.item_list_state.select(Some(0));
+                self.focus = Focus::Items;
+                self.status = format!("Showing feeds with tag: {}", tag);
+            }
+        }
+    }
+
+    fn get_items_by_tag(&self, tag: &str) -> Vec<FeedItem> {
+        let mut tagged_items = Vec::new();
+        for source in &self.sources {
+            if source.tags.contains(&tag.to_string()) {
+                if let Some(feed_items) = crate::cache::load_cached_items(&source.name) {
+                    tagged_items.extend(feed_items);
+                }
+            }
+        }
+        tagged_items.sort_by(|a, b| b.date.cmp(&a.date));
+        tagged_items
+    }
+
+    pub fn get_feeds_by_tag(&self, tag: &str) -> Vec<&FeedSource> {
+        self.sources
+            .iter()
+            .filter(|s| s.tags.contains(&tag.to_string()))
+            .collect()
     }
 }

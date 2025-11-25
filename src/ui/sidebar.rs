@@ -11,17 +11,27 @@ use ratatui::{
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
     let chunks = if app.show_tooltips {
-        Layout::vertical([Constraint::Length(4), Constraint::Min(0), Constraint::Length(3)])
-            .split(area)
+        Layout::vertical([
+            Constraint::Length(4),
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+            Constraint::Length(3),
+        ])
+        .split(area)
     } else {
-        Layout::vertical([Constraint::Length(4), Constraint::Min(0)])
-            .split(area)
+        Layout::vertical([
+            Constraint::Length(4),
+            Constraint::Percentage(50),
+            Constraint::Percentage(50),
+        ])
+        .split(area)
     };
 
     render_logo(f, chunks[0]);
     render_feeds_list(f, app, chunks[1]);
+    render_tags_list(f, app, chunks[2]);
     if app.show_tooltips {
-        render_help(f, app, chunks[2]);
+        render_help(f, app, chunks[3]);
     }
 }
 
@@ -72,6 +82,33 @@ fn render_feeds_list(f: &mut Frame, app: &App, area: Rect) {
     f.render_stateful_widget(feeds_list, area, &mut app.feed_list_state.clone());
 }
 
+fn render_tags_list(f: &mut Frame, app: &App, area: Rect) {
+    let is_focused = app.focus == Focus::Tags;
+    let tags = app.get_all_tags();
+    let mut items: Vec<ListItem> = Vec::new();
+
+    for (idx, tag) in tags.iter().enumerate() {
+        let selected = idx == app.tag_index && is_focused;
+        let feed_count = app.get_feeds_by_tag(tag).len();
+        let style = if selected {
+            Style::default().fg(Color::White).bg(SELECTED_BG)
+        } else {
+            Style::default().fg(Color::White)
+        };
+        items.push(ListItem::new(format!("  # {} ({})", truncate(tag, 15), feed_count)).style(style));
+    }
+
+    let tags_block = Block::default()
+        .title(Span::styled(" Tags ", Style::default().fg(SECONDARY)))
+        .borders(Borders::ALL)
+        .border_style(Style::default().fg(if is_focused { PRIMARY } else { DIM }));
+
+    let tags_list = List::new(items)
+        .block(tags_block)
+        .highlight_style(Style::default());
+    f.render_stateful_widget(tags_list, area, &mut app.tag_list_state.clone());
+}
+
 fn render_help(f: &mut Frame, app: &App, area: Rect) {
     if !app.show_tooltips {
         return;
@@ -80,8 +117,8 @@ fn render_help(f: &mut Frame, app: &App, area: Rect) {
         Line::from(vec![
             Span::styled("a", Style::default().fg(SUCCESS)),
             Span::raw(" add "),
-            Span::styled("d", Style::default().fg(SUCCESS)),
-            Span::raw(" del "),
+            Span::styled("t", Style::default().fg(SUCCESS)),
+            Span::raw(" tag "),
             Span::styled("r", Style::default().fg(SUCCESS)),
             Span::raw(" refresh"),
         ]),
