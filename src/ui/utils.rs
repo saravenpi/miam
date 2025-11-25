@@ -9,11 +9,11 @@ pub fn truncate(s: &str, max_len: usize) -> String {
     }
 }
 
-pub fn feed_icon(url: &str) -> &'static str {
+pub fn feed_icon(url: &str) -> char {
     if url.contains("youtube.com") || url.contains("youtu.be") {
-        "▶"
+        '\u{f16a}'
     } else {
-        "◆"
+        '\u{f15c}'
     }
 }
 

@@ -10,14 +10,17 @@ use ratatui::{
 };
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let chunks = if app.show_tooltips {
+    let is_loading = app.loading || app.background_loading || app.article_loading;
+    let show_status = app.show_tooltips || is_loading;
+
+    let chunks = if show_status {
         Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).split(area)
     } else {
         Layout::vertical([Constraint::Min(0)]).split(area)
     };
 
     render_feed_items(f, app, chunks[0]);
-    if app.show_tooltips {
+    if show_status {
         render_status(f, app, chunks[1]);
     }
 }
@@ -83,7 +86,7 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
                 Style::default().fg(Color::White)
             };
 
-            let icon = item.link.as_ref().map(|l| feed_icon(l)).unwrap_or("◆");
+            let icon = item.link.as_ref().map(|l| feed_icon(l)).unwrap_or('\u{f15c}');
             let available_width = area.width.saturating_sub(6) as usize;
             let title = truncate(&item.title, available_width);
 
@@ -135,26 +138,31 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
 }
 
 fn render_status(f: &mut Frame, app: &App, area: Rect) {
-    if !app.show_tooltips {
-        return;
-    }
-
-    let status_text = if app.loading || app.background_loading || app.article_loading {
+    let is_loading = app.loading || app.background_loading || app.article_loading;
+    let status_text = if is_loading {
         format!("{} {}", app.spinner_char(), app.status)
     } else {
         app.status.clone()
     };
 
-    let status = Paragraph::new(Line::from(vec![
-        Span::styled("Tab", Style::default().fg(SUCCESS)),
-        Span::raw(" switch "),
-        Span::styled("o", Style::default().fg(SUCCESS)),
-        Span::raw(" open "),
-        Span::styled("q", Style::default().fg(SUCCESS)),
-        Span::raw(" quit"),
-        Span::raw("  "),
-        Span::styled(status_text, Style::default().fg(if app.loading || app.background_loading || app.article_loading { PRIMARY } else { DIM })),
-    ]))
-    .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(DIM)));
+    let content = if app.show_tooltips {
+        Line::from(vec![
+            Span::styled("Tab", Style::default().fg(SUCCESS)),
+            Span::raw(" switch "),
+            Span::styled("o", Style::default().fg(SUCCESS)),
+            Span::raw(" open "),
+            Span::styled("q", Style::default().fg(SUCCESS)),
+            Span::raw(" quit"),
+            Span::raw("  "),
+            Span::styled(status_text, Style::default().fg(if is_loading { PRIMARY } else { DIM })),
+        ])
+    } else {
+        Line::from(vec![
+            Span::styled(status_text, Style::default().fg(PRIMARY)),
+        ])
+    };
+
+    let status = Paragraph::new(content)
+        .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(DIM)));
     f.render_widget(status, area);
 }
