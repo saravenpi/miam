@@ -9,54 +9,9 @@ permissions:
   contents: write
 
 jobs:
-  create-release:
-    name: Create Release
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Get version from tag
-        id: get_version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
-
-      - name: Create Release Notes
-        run: |
-          echo "# Release v${{ steps.get_version.outputs.VERSION }}" > release_notes.md
-          echo "" >> release_notes.md
-          echo "## Installation" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "### Quick Install" >> release_notes.md
-          echo "" >> release_notes.md
-          echo '```bash' >> release_notes.md
-          echo 'curl -sSL https://raw.githubusercontent.com/saravenpi/miam/master/install.sh | bash' >> release_notes.md
-          echo '```' >> release_notes.md
-          echo "" >> release_notes.md
-          echo "### Upgrade Existing Installation" >> release_notes.md
-          echo "" >> release_notes.md
-          echo '```bash' >> release_notes.md
-          echo 'miam upgrade' >> release_notes.md
-          echo '```' >> release_notes.md
-          echo "" >> release_notes.md
-          echo "## Available Binaries" >> release_notes.md
-          echo "" >> release_notes.md
-          echo "- **Linux x86_64**: \`miam-linux-x86_64\`" >> release_notes.md
-          echo "- **Linux ARM64**: \`miam-linux-aarch64\`" >> release_notes.md
-          echo "- **macOS x86_64**: \`miam-macos-x86_64\`" >> release_notes.md
-          echo "- **macOS ARM64** (Apple Silicon): \`miam-macos-aarch64\`" >> release_notes.md
-
-      - name: Create release
-        uses: softprops/action-gh-release@v1
-        with:
-          body_path: release_notes.md
-          draft: false
-          prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
-
   build-and-upload:
     name: Build and Upload
     runs-on: ${{ matrix.os }}
-    needs: create-release
     strategy:
       matrix:
         include:
