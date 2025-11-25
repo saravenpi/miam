@@ -39,7 +39,6 @@ pub struct App {
     pub show_tooltips: bool,
     pub tag_editor_mode: bool,
     pub tag_input: String,
-    pub selected_tag: Option<String>,
     pub tag_index: usize,
     pub tag_list_state: ListState,
 }
@@ -79,7 +78,6 @@ impl App {
             show_tooltips: true,
             tag_editor_mode: false,
             tag_input: String::new(),
-            selected_tag: None,
             tag_index: 0,
             tag_list_state,
         }
@@ -305,8 +303,10 @@ impl App {
         self.status.clear();
         self.feed_index = 0;
         self.item_index = 0;
+        self.tag_index = 0;
         self.feed_list_state.select(Some(0));
         self.item_list_state.select(Some(0));
+        self.tag_list_state.select(Some(0));
     }
 
     pub fn get_filtered_sources(&self) -> Vec<(usize, &FeedSource)> {
@@ -445,7 +445,16 @@ impl App {
         }
         let mut sorted_tags: Vec<String> = tags.into_iter().collect();
         sorted_tags.sort();
-        sorted_tags
+
+        if self.filter.is_empty() {
+            sorted_tags
+        } else {
+            let filter_lower = self.filter.to_lowercase();
+            sorted_tags
+                .into_iter()
+                .filter(|t| t.to_lowercase().contains(&filter_lower))
+                .collect()
+        }
     }
 
     pub fn start_tag_editor(&mut self) {
@@ -515,7 +524,6 @@ impl App {
             let tags = self.get_all_tags();
             if self.tag_index < tags.len() {
                 let tag = tags[self.tag_index].clone();
-                self.selected_tag = Some(tag.clone());
                 self.items = self.get_items_by_tag(&tag);
                 self.item_index = 0;
                 self.item_list_state.select(Some(0));

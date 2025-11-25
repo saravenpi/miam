@@ -294,15 +294,19 @@ fn run_app<B: ratatui::backend::Backend>(
                             app.filter.push(c);
                             app.feed_index = 0;
                             app.item_index = 0;
+                            app.tag_index = 0;
                             app.feed_list_state.select(Some(0));
                             app.item_list_state.select(Some(0));
+                            app.tag_list_state.select(Some(0));
                         }
                         KeyCode::Backspace => {
                             app.filter.pop();
                             app.feed_index = 0;
                             app.item_index = 0;
+                            app.tag_index = 0;
                             app.feed_list_state.select(Some(0));
                             app.item_list_state.select(Some(0));
+                            app.tag_list_state.select(Some(0));
                         }
                         _ => {}
                     }
@@ -334,7 +338,10 @@ fn run_app<B: ratatui::backend::Backend>(
                     match key.code {
                         KeyCode::Char('q') => return Ok(()),
                         KeyCode::Char('/') => {
-                            if app.focus == app::Focus::Feeds || app.focus == app::Focus::Items {
+                            if app.focus == app::Focus::Feeds
+                                || app.focus == app::Focus::Items
+                                || app.focus == app::Focus::Tags
+                            {
                                 app.start_filter();
                             }
                         }
