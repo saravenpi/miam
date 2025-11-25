@@ -93,7 +93,15 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
                 Span::raw(title),
             ]);
 
-            let metadata = format!("    {} • {} • {}", date, relative, truncate(&item.source_name, 15));
+            let video_type = if item.is_youtube_short {
+                " • Short"
+            } else if item.link.as_ref().map(|l| l.contains("youtube.com") || l.contains("youtu.be")).unwrap_or(false) {
+                " • Video"
+            } else {
+                ""
+            };
+
+            let metadata = format!("    {} • {}{} • {}", date, relative, video_type, truncate(&item.source_name, 15));
             let second_line = Line::from(vec![
                 Span::styled(metadata, Style::default().fg(DIM)),
             ]);

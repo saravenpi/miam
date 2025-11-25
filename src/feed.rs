@@ -18,6 +18,8 @@ pub struct FeedItem {
     pub link: Option<String>,
     pub date: DateTime<Utc>,
     pub source_name: String,
+    #[serde(default)]
+    pub is_youtube_short: bool,
 }
 
 fn create_client() -> Result<Client> {
@@ -115,11 +117,18 @@ fn parse_rss(content: &[u8]) -> Result<Vec<FeedItem>> {
                 .map(|d| d.with_timezone(&Utc))
                 .unwrap_or_else(Utc::now);
 
+            let title = item.title().unwrap_or("Untitled").to_string();
+            let link = item.link().map(String::from);
+            let description = item.description().unwrap_or("");
+
+            let is_youtube_short = is_youtube_short(&link, &title, description);
+
             FeedItem {
-                title: item.title().unwrap_or("Untitled").to_string(),
-                link: item.link().map(String::from),
+                title,
+                link,
                 date,
                 source_name: source_name.clone(),
+                is_youtube_short,
             }
         })
         .collect();
@@ -139,19 +148,44 @@ fn parse_atom(content: &[u8]) -> Result<Vec<FeedItem>> {
                 .updated()
                 .with_timezone(&Utc);
 
+            let title = entry.title().to_string();
             let link = entry
                 .links()
                 .first()
                 .map(|l| l.href().to_string());
 
+            let summary = entry.summary().map(|s| s.as_str()).unwrap_or("");
+            let is_youtube_short = is_youtube_short(&link, &title, summary);
+
             FeedItem {
-                title: entry.title().to_string(),
+                title,
                 link,
                 date,
                 source_name: source_name.clone(),
+                is_youtube_short,
             }
         })
         .collect();
 
     Ok(items)
+}
+
+fn is_youtube_short(link: &Option<String>, title: &str, description: &str) -> bool {
+    if let Some(url) = link {
+        if !url.contains("youtube.com") && !url.contains("youtu.be") {
+            return false;
+        }
+
+        if url.contains("/shorts/") {
+            return true;
+        }
+    }
+
+    let title_lower = title.to_lowercase();
+    let desc_lower = description.to_lowercase();
+
+    title_lower.contains("#shorts")
+        || title_lower.contains("#short")
+        || desc_lower.contains("#shorts")
+        || desc_lower.contains("#short")
 }
