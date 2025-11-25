@@ -365,7 +365,8 @@ fn run_app<B: ratatui::backend::Backend>(
                     }
                 } else if app.filter_mode {
                     match key.code {
-                        KeyCode::Enter | KeyCode::Esc => app.cancel_filter(),
+                        KeyCode::Enter => app.exit_filter(),
+                        KeyCode::Esc => app.clear_filter(),
                         KeyCode::Char(c) => {
                             app.filter.push(c);
                             app.feed_index = 0;
@@ -419,6 +420,11 @@ fn run_app<B: ratatui::backend::Backend>(
                                 || app.focus == app::Focus::Tags
                             {
                                 app.start_filter();
+                            }
+                        }
+                        KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::ALT) => {
+                            if !app.filter.is_empty() {
+                                app.clear_filter();
                             }
                         }
                         KeyCode::Char('j') | KeyCode::Down => app.next(),

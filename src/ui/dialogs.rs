@@ -55,19 +55,22 @@ pub fn render_filter_dialog(f: &mut Frame, app: &App) {
 pub fn render_tag_editor(f: &mut Frame, app: &App) {
     let tag_count = app.editing_tags.len() as u16;
     let tags_height = if tag_count > 0 {
-        tag_count.div_ceil(3).max(3)
+        tag_count.div_ceil(3).max(3) + 2
     } else {
         0
     };
-    let total_height = 3 + tags_height + 2;
-    let area = centered_rect(80, total_height.min(25), f.area());
+    let total_height = 3 + tags_height;
+
+    let dialog_width = (f.area().width * 80 / 100).max(40);
+    let dialog_height = total_height.min(25).max(5);
+    let area = centered_rect(dialog_width, dialog_height, f.area());
 
     f.render_widget(Clear, area);
 
     let chunks = if app.editing_tags.is_empty() {
         Layout::default()
             .direction(Direction::Vertical)
-            .constraints([Constraint::Length(3)])
+            .constraints([Constraint::Min(3)])
             .split(area)
     } else {
         Layout::default()

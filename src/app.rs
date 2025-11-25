@@ -305,7 +305,12 @@ impl App {
         }
     }
 
-    pub fn cancel_filter(&mut self) {
+    pub fn exit_filter(&mut self) {
+        self.filter_mode = false;
+        self.status.clear();
+    }
+
+    pub fn clear_filter(&mut self) {
         self.filter_mode = false;
         self.filter.clear();
         self.status.clear();
