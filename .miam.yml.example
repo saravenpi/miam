@@ -1,0 +1,41 @@
+# miam RSS Reader Configuration
+# Save this file as ~/.miam.yml in your home directory
+
+# Feeds Section
+# Format: "Display Name": "RSS/Atom Feed URL"
+feeds:
+  # Tech News
+  Hacker News: https://news.ycombinator.com/rss
+  TechCrunch: https://techcrunch.com/feed/
+  The Verge: https://www.theverge.com/rss/index.xml
+  Ars Technica: https://feeds.arstechnica.com/arstechnica/index
+
+  # Programming & Development
+  Rust Blog: https://blog.rust-lang.org/feed.xml
+  GitHub Blog: https://github.blog/feed/
+  Dev.to: https://dev.to/feed
+
+  # YouTube Channels (use channel RSS feed)
+  # Format: https://www.youtube.com/feeds/videos.xml?channel_id=CHANNEL_ID
+  Fireship: https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA
+  ThePrimeagen: https://www.youtube.com/feeds/videos.xml?channel_id=UC8ENHE5xdFSwx71u3fDH5Xw
+
+  # Blogs
+  Julia Evans: https://jvns.ca/atom.xml
+  Xe Iaso: https://xeiaso.net/blog.rss
+
+# Settings Section
+settings:
+  # Enable Invidious for YouTube links
+  # When true, YouTube videos open through Invidious instead of YouTube.com
+  # Good for privacy and avoiding YouTube's tracking
+  invidious: false
+
+  # Invidious Instance to use
+  # Available instances:
+  #   - yewtu.be (default)
+  #   - vid.puffyan.us
+  #   - invidious.flokinet.to
+  #   - invidious.privacydev.net
+  #   - iv.melmac.space
+  invidious_instance: yewtu.be
