@@ -437,14 +437,22 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Enter => {
                             if app.focus == app::Focus::Feeds && !app.sources.is_empty() {
                                 app.loading = true;
-                                if app.show_all && app.feed_index == 0 {
+                                if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
                                     app.status = "Loading all feeds...".to_string();
                                     spawn_refresh_all(app.sources.clone(), tx.clone());
                                 } else {
-                                    let idx = if app.show_all { app.feed_index - 1 } else { app.feed_index };
-                                    let source = app.sources[idx].clone();
-                                    app.status = format!("Loading {}...", source.name);
-                                    spawn_refresh_single(source, tx.clone());
+                                    let filtered_sources = app.get_filtered_sources();
+                                    let display_idx = if app.show_all && app.filter.is_empty() {
+                                        app.feed_index - 1
+                                    } else {
+                                        app.feed_index
+                                    };
+                                    if display_idx < filtered_sources.len() {
+                                        let (original_idx, _) = filtered_sources[display_idx];
+                                        let source = app.sources[original_idx].clone();
+                                        app.status = format!("Loading {}...", source.name);
+                                        spawn_refresh_single(source, tx.clone());
+                                    }
                                 }
                                 app.focus = app::Focus::Items;
                             } else if app.focus == app::Focus::Tags {

@@ -110,6 +110,13 @@ paywall_remover: true
 # Examples: calm, firefox, chromium, brave, etc.
 # browser_command: calm
 
+# Hide YouTube Shorts
+# Filter out YouTube Shorts from feed results
+# When enabled, Shorts will not appear in the feed item list
+# Type: boolean
+# Default: false
+hide_shorts: false
+
 # ============================================================================
 # TIPS
 # ============================================================================

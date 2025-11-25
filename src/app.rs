@@ -45,6 +45,7 @@ pub struct App {
     pub selected_tag_index: usize,
     pub paywall_remover: bool,
     pub browser_command: Option<String>,
+    pub hide_shorts: bool,
 }
 
 impl App {
@@ -88,6 +89,7 @@ impl App {
             selected_tag_index: 0,
             paywall_remover: false,
             browser_command: None,
+            hide_shorts: false,
         }
     }
 
@@ -154,6 +156,7 @@ impl App {
             self.show_tooltips = config.settings.show_tooltips;
             self.paywall_remover = config.settings.paywall_remover;
             self.browser_command = config.settings.browser_command;
+            self.hide_shorts = config.settings.hide_shorts;
             self.sources = config.sources;
         }
     }
@@ -167,6 +170,7 @@ impl App {
                 show_tooltips: self.show_tooltips,
                 paywall_remover: self.paywall_remover,
                 browser_command: self.browser_command.clone(),
+                hide_shorts: self.hide_shorts,
             },
         };
         config.save();
@@ -340,7 +344,7 @@ impl App {
     }
 
     pub fn get_filtered_items(&self) -> Vec<(usize, &FeedItem)> {
-        if self.filter.is_empty() {
+        let mut items: Vec<(usize, &FeedItem)> = if self.filter.is_empty() {
             self.items.iter().enumerate().collect()
         } else {
             let filter_lower = self.filter.to_lowercase();
@@ -349,17 +353,29 @@ impl App {
                 .enumerate()
                 .filter(|(_, i)| i.title.to_lowercase().contains(&filter_lower))
                 .collect()
+        };
+
+        if self.hide_shorts {
+            items.retain(|(_, item)| !item.is_youtube_short);
         }
+
+        items
     }
 
     pub fn delete_selected(&mut self) {
         if self.focus == Focus::Feeds {
-            if self.show_all && self.feed_index == 0 {
+            if self.show_all && self.feed_index == 0 && self.filter.is_empty() {
                 return;
             }
-            let idx = if self.show_all { self.feed_index - 1 } else { self.feed_index };
-            if idx < self.sources.len() {
-                self.sources.remove(idx);
+            let filtered_sources = self.get_filtered_sources();
+            let display_idx = if self.show_all && self.filter.is_empty() {
+                self.feed_index - 1
+            } else {
+                self.feed_index
+            };
+            if display_idx < filtered_sources.len() {
+                let (original_idx, _) = filtered_sources[display_idx];
+                self.sources.remove(original_idx);
                 let len = self.feed_list_len();
                 if self.feed_index >= len && len > 0 {
                     self.feed_index = len - 1;
@@ -491,22 +507,25 @@ impl App {
 
     pub fn start_tag_editor(&mut self) {
         if self.focus == Focus::Feeds {
-            let idx = if self.show_all && self.feed_index > 0 {
-                self.feed_index - 1
-            } else if !self.show_all {
-                self.feed_index
-            } else {
+            if self.show_all && self.feed_index == 0 && self.filter.is_empty() {
                 return;
+            }
+            let filtered_sources = self.get_filtered_sources();
+            let display_idx = if self.show_all && self.filter.is_empty() {
+                self.feed_index - 1
+            } else {
+                self.feed_index
             };
 
-            if idx < self.sources.len() {
+            if display_idx < filtered_sources.len() {
+                let (original_idx, _) = filtered_sources[display_idx];
                 self.tag_editor_mode = true;
                 self.tag_input.clear();
-                self.editing_tags = self.sources[idx].tags.clone();
+                self.editing_tags = self.sources[original_idx].tags.clone();
                 self.selected_tag_index = 0;
                 self.status = format!(
                     "Edit tags for '{}' (Enter to add, Tab/arrows to select, Del to remove):",
-                    self.sources[idx].name
+                    self.sources[original_idx].name
                 );
             }
         }
@@ -544,17 +563,20 @@ impl App {
     }
 
     pub fn submit_tags(&mut self) {
-        let idx = if self.show_all && self.feed_index > 0 {
-            self.feed_index - 1
-        } else if !self.show_all {
-            self.feed_index
-        } else {
+        if self.show_all && self.feed_index == 0 && self.filter.is_empty() {
             self.cancel_tag_editor();
             return;
+        }
+        let filtered_sources = self.get_filtered_sources();
+        let display_idx = if self.show_all && self.filter.is_empty() {
+            self.feed_index - 1
+        } else {
+            self.feed_index
         };
 
-        if idx < self.sources.len() {
-            self.sources[idx].tags = self.editing_tags.clone();
+        if display_idx < filtered_sources.len() {
+            let (original_idx, _) = filtered_sources[display_idx];
+            self.sources[original_idx].tags = self.editing_tags.clone();
             self.save_config();
             self.status = "Tags updated".to_string();
         }

@@ -146,6 +146,7 @@ invidious_instance: yewtu.be
 show_tooltips: true
 paywall_remover: true
 browser_command: calm
+hide_shorts: false
 ```
 
 ### Configuration Options
@@ -197,6 +198,11 @@ All settings are defined at the root level of the config file, alongside the `fe
   - If not set, the system default browser will be used (`open` on macOS, `xdg-open` on Linux, `start` on Windows)
   - The URL will be passed as an argument to the specified command
   - Example: `calm`, `firefox`, `chromium`, etc.
+
+- **`hide_shorts`** (boolean, default: `false`)
+  - Filter out YouTube Shorts from feed results
+  - When enabled, Shorts will not appear in the feed item list
+  - Useful if you prefer to only see full-length YouTube videos
 
 ## Keybindings
 

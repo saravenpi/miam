@@ -24,6 +24,8 @@ pub struct Settings {
     pub paywall_remover: bool,
     #[serde(default)]
     pub browser_command: Option<String>,
+    #[serde(default = "default_hide_shorts")]
+    pub hide_shorts: bool,
 }
 
 fn default_show_tooltips() -> bool {
@@ -32,6 +34,10 @@ fn default_show_tooltips() -> bool {
 
 fn default_paywall_remover() -> bool {
     true
+}
+
+fn default_hide_shorts() -> bool {
+    false
 }
 
 pub struct Config {
@@ -60,6 +66,8 @@ struct ConfigFile {
     paywall_remover: bool,
     #[serde(default)]
     browser_command: Option<String>,
+    #[serde(default = "default_hide_shorts")]
+    hide_shorts: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -101,6 +109,7 @@ impl Config {
                     show_tooltips: config_file.show_tooltips,
                     paywall_remover: config_file.paywall_remover,
                     browser_command: config_file.browser_command,
+                    hide_shorts: config_file.hide_shorts,
                 },
             });
         }
@@ -165,6 +174,7 @@ impl Config {
                 show_tooltips: self.settings.show_tooltips,
                 paywall_remover: self.settings.paywall_remover,
                 browser_command: self.settings.browser_command.clone(),
+                hide_shorts: self.settings.hide_shorts,
             };
             if let Ok(content) = serde_yaml::to_string(&config_file) {
                 let _ = fs::write(path, content);
