@@ -179,13 +179,30 @@ fn is_youtube_short(link: &Option<String>, title: &str, description: &str) -> bo
         if url.contains("/shorts/") {
             return true;
         }
+    } else {
+        return false;
     }
 
     let title_lower = title.to_lowercase();
     let desc_lower = description.to_lowercase();
 
-    title_lower.contains("#shorts")
-        || title_lower.contains("#short")
+    if title_lower.contains("#shorts")
+        || title_lower.contains("#short ")
+        || title_lower.ends_with("#short")
         || desc_lower.contains("#shorts")
-        || desc_lower.contains("#short")
+        || desc_lower.contains("#short ")
+        || desc_lower.ends_with("#short") {
+        return true;
+    }
+
+    if desc_lower.contains("shorts") && (
+        desc_lower.contains("youtube shorts")
+        || desc_lower.contains("yt shorts")
+        || desc_lower.contains("short video")
+        || desc_lower.contains("short form")
+    ) {
+        return true;
+    }
+
+    false
 }
