@@ -90,8 +90,8 @@ fn main() -> Result<()> {
 fn upgrade() -> Result<()> {
     use std::process::Command;
 
-    println!("Upgrading miam by rebuilding from source...");
-    println!("This will fetch the latest version from GitHub and compile it.");
+    println!("Checking for updates...");
+    println!("Current version: {}", VERSION);
 
     let tmp_dir = std::env::temp_dir().join("miam-upgrade");
 
@@ -100,7 +100,7 @@ fn upgrade() -> Result<()> {
         std::fs::remove_dir_all(&tmp_dir)?;
     }
 
-    println!("Cloning repository...");
+    println!("Cloning latest version from GitHub...");
     let clone_status = Command::new("git")
         .args(["clone", "--depth", "1", "https://github.com/saravenpi/miam.git"])
         .arg(&tmp_dir)
@@ -110,13 +110,33 @@ fn upgrade() -> Result<()> {
         anyhow::bail!("Failed to clone repository");
     }
 
+    let cargo_toml_path = tmp_dir.join("Cargo.toml");
+    let cargo_toml = std::fs::read_to_string(&cargo_toml_path)?;
+
+    let latest_version = cargo_toml
+        .lines()
+        .find(|line| line.starts_with("version = "))
+        .and_then(|line| line.split('"').nth(1))
+        .unwrap_or("unknown");
+
+    println!("Latest version: {}", latest_version);
+
+    if latest_version == VERSION {
+        println!("Already up to date!");
+        std::fs::remove_dir_all(&tmp_dir)?;
+        return Ok(());
+    }
+
+    println!("\nUpgrading from {} to {}...", VERSION, latest_version);
     println!("Building from source (this may take a few minutes)...");
+
     let build_status = Command::new("cargo")
         .args(["build", "--release"])
         .current_dir(&tmp_dir)
         .status()?;
 
     if !build_status.success() {
+        std::fs::remove_dir_all(&tmp_dir)?;
         anyhow::bail!("Build failed");
     }
 
@@ -129,8 +149,8 @@ fn upgrade() -> Result<()> {
     println!("Cleaning up...");
     std::fs::remove_dir_all(&tmp_dir)?;
 
-    println!("Successfully upgraded miam!");
-    println!("Restart the application to use the new version.");
+    println!("\n✓ Successfully upgraded to version {}!", latest_version);
+    println!("The new version is now active.");
 
     Ok(())
 }
