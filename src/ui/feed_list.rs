@@ -133,15 +133,6 @@ fn render_status(f: &mut Frame, app: &App, area: Rect) {
         app.status.clone()
     };
 
-    let has_youtube = app.items.iter().any(|i| {
-        i.link.as_ref().map(|l| l.contains("youtube.com") || l.contains("youtu.be")).unwrap_or(false)
-    });
-    let yt_note = if has_youtube && !app.loading && !app.items.is_empty() {
-        " (YT: 15 max)"
-    } else {
-        ""
-    };
-
     let status = Paragraph::new(Line::from(vec![
         Span::styled("Tab", Style::default().fg(SUCCESS)),
         Span::raw(" switch "),
@@ -151,7 +142,6 @@ fn render_status(f: &mut Frame, app: &App, area: Rect) {
         Span::raw(" quit"),
         Span::raw("  "),
         Span::styled(status_text, Style::default().fg(if app.loading || app.background_loading { PRIMARY } else { DIM })),
-        Span::styled(yt_note, Style::default().fg(DIM)),
     ]))
     .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(DIM)));
     f.render_widget(status, area);
