@@ -72,7 +72,7 @@ fn render_feeds_list(f: &mut Frame, app: &App, area: Rect) {
     }
 
     let feeds_block = Block::default()
-        .title(Span::styled(" Feeds ", Style::default().fg(SECONDARY)))
+        .title(Span::styled(" 📡 Feeds ", Style::default().fg(SECONDARY)))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(if is_focused { PRIMARY } else { DIM }));
 
@@ -99,7 +99,7 @@ fn render_tags_list(f: &mut Frame, app: &App, area: Rect) {
     }
 
     let tags_block = Block::default()
-        .title(Span::styled(" Tags ", Style::default().fg(SECONDARY)))
+        .title(Span::styled(" 🏷️  Tags ", Style::default().fg(SECONDARY)))
         .borders(Borders::ALL)
         .border_style(Style::default().fg(if is_focused { PRIMARY } else { DIM }));
 

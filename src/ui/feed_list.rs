@@ -139,7 +139,7 @@ fn render_status(f: &mut Frame, app: &App, area: Rect) {
         return;
     }
 
-    let status_text = if app.loading || app.background_loading {
+    let status_text = if app.loading || app.background_loading || app.article_loading {
         format!("{} {}", app.spinner_char(), app.status)
     } else {
         app.status.clone()
@@ -153,7 +153,7 @@ fn render_status(f: &mut Frame, app: &App, area: Rect) {
         Span::styled("q", Style::default().fg(SUCCESS)),
         Span::raw(" quit"),
         Span::raw("  "),
-        Span::styled(status_text, Style::default().fg(if app.loading || app.background_loading { PRIMARY } else { DIM })),
+        Span::styled(status_text, Style::default().fg(if app.loading || app.background_loading || app.article_loading { PRIMARY } else { DIM })),
     ]))
     .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(DIM)));
     f.render_widget(status, area);

@@ -18,7 +18,7 @@ pub fn render_input_dialog(f: &mut Frame, app: &App) {
         .style(Style::default().fg(Color::White))
         .block(
             Block::default()
-                .title(Span::styled(" Add Feed URL ", Style::default().fg(PRIMARY)))
+                .title(Span::styled(" ➕ Add Feed URL ", Style::default().fg(PRIMARY)))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(PRIMARY)),
         );
@@ -33,10 +33,10 @@ pub fn render_filter_dialog(f: &mut Frame, app: &App) {
     f.render_widget(Clear, area);
 
     let title = match app.focus {
-        Focus::Feeds => " Filter Feeds ",
-        Focus::Items => " Filter Items ",
-        Focus::Tags => " Filter Tags ",
-        Focus::Reader => " Filter ",
+        Focus::Feeds => " 🔍 Filter Feeds ",
+        Focus::Items => " 🔍 Filter Items ",
+        Focus::Tags => " 🔍 Filter Tags ",
+        Focus::Reader => " 🔍 Filter ",
     };
 
     let filter = Paragraph::new(app.filter.as_str())
@@ -86,7 +86,7 @@ pub fn render_tag_editor(f: &mut Frame, app: &App) {
         .style(Style::default().fg(Color::White))
         .block(
             Block::default()
-                .title(Span::styled(" Add Tag (Press Enter) ", Style::default().fg(SUCCESS)))
+                .title(Span::styled(" 🏷️  Add Tag (Press Enter) ", Style::default().fg(SUCCESS)))
                 .borders(Borders::ALL)
                 .border_style(Style::default().fg(SUCCESS)),
         );
@@ -132,7 +132,7 @@ pub fn render_tag_editor(f: &mut Frame, app: &App) {
         let tags_display = Paragraph::new(lines)
             .block(
                 Block::default()
-                    .title(Span::styled(" Current Tags (Tab/Arrows to select, Del to remove, Enter to save) ", Style::default().fg(SUCCESS)))
+                    .title(Span::styled(" 🏷️  Current Tags (Tab/Arrows to select, Del to remove, Enter to save) ", Style::default().fg(SUCCESS)))
                     .borders(Borders::ALL)
                     .border_style(Style::default().fg(SUCCESS)),
             );
