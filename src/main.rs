@@ -471,8 +471,23 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Char('r') => {
                             if !app.sources.is_empty() {
                                 app.loading = true;
-                                app.status = "Refreshing all feeds...".to_string();
-                                spawn_refresh_all(app.sources.clone(), tx.clone());
+                                if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
+                                    app.status = "Refreshing all feeds...".to_string();
+                                    spawn_refresh_all(app.sources.clone(), tx.clone());
+                                } else {
+                                    let filtered_sources = app.get_filtered_sources();
+                                    let display_idx = if app.show_all && app.filter.is_empty() {
+                                        app.feed_index - 1
+                                    } else {
+                                        app.feed_index
+                                    };
+                                    if display_idx < filtered_sources.len() {
+                                        let (original_idx, _) = filtered_sources[display_idx];
+                                        let source = app.sources[original_idx].clone();
+                                        app.status = format!("Refreshing {}...", source.name);
+                                        spawn_refresh_single(source, tx.clone());
+                                    }
+                                }
                             }
                         }
                         KeyCode::Char('o') => {
