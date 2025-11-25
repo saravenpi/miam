@@ -43,6 +43,7 @@ pub struct App {
     pub tag_list_state: ListState,
     pub editing_tags: Vec<String>,
     pub selected_tag_index: usize,
+    pub paywall_remover: bool,
 }
 
 impl App {
@@ -84,6 +85,7 @@ impl App {
             tag_list_state,
             editing_tags: Vec::new(),
             selected_tag_index: 0,
+            paywall_remover: false,
         }
     }
 
@@ -148,6 +150,7 @@ impl App {
             self.use_invidious = config.settings.invidious;
             self.invidious_instance = config.get_invidious_instance().to_string();
             self.show_tooltips = config.settings.show_tooltips;
+            self.paywall_remover = config.settings.paywall_remover;
             self.sources = config.sources;
         }
     }
@@ -159,6 +162,7 @@ impl App {
                 invidious: self.use_invidious,
                 invidious_instance: Some(self.invidious_instance.clone()),
                 show_tooltips: self.show_tooltips,
+                paywall_remover: self.paywall_remover,
             },
         };
         config.save();

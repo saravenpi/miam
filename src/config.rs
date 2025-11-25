@@ -20,6 +20,8 @@ pub struct Settings {
     pub invidious_instance: Option<String>,
     #[serde(default = "default_show_tooltips")]
     pub show_tooltips: bool,
+    #[serde(default)]
+    pub paywall_remover: bool,
 }
 
 fn default_show_tooltips() -> bool {
@@ -112,6 +114,7 @@ impl Config {
                     invidious: self.settings.invidious,
                     invidious_instance: self.settings.invidious_instance.clone(),
                     show_tooltips: self.settings.show_tooltips,
+                    paywall_remover: self.settings.paywall_remover,
                 },
             };
             if let Ok(content) = serde_yaml::to_string(&config_file) {

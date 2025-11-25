@@ -88,22 +88,49 @@ fn main() -> Result<()> {
 }
 
 fn upgrade() -> Result<()> {
-    println!("Checking for updates...");
+    use std::process::Command;
 
-    let status = self_update::backends::github::Update::configure()
-        .repo_owner("saravenpi")
-        .repo_name("miam")
-        .bin_name("miam")
-        .show_download_progress(true)
-        .current_version(VERSION)
-        .build()?
-        .update()?;
+    println!("Upgrading miam by rebuilding from source...");
+    println!("This will fetch the latest version from GitHub and compile it.");
 
-    if status.updated() {
-        println!("Successfully updated to version {}", status.version());
-    } else {
-        println!("Already up to date (version {})", VERSION);
+    let tmp_dir = std::env::temp_dir().join("miam-upgrade");
+
+    if tmp_dir.exists() {
+        println!("Cleaning up previous build directory...");
+        std::fs::remove_dir_all(&tmp_dir)?;
     }
+
+    println!("Cloning repository...");
+    let clone_status = Command::new("git")
+        .args(["clone", "--depth", "1", "https://github.com/saravenpi/miam.git"])
+        .arg(&tmp_dir)
+        .status()?;
+
+    if !clone_status.success() {
+        anyhow::bail!("Failed to clone repository");
+    }
+
+    println!("Building from source (this may take a few minutes)...");
+    let build_status = Command::new("cargo")
+        .args(["build", "--release"])
+        .current_dir(&tmp_dir)
+        .status()?;
+
+    if !build_status.success() {
+        anyhow::bail!("Build failed");
+    }
+
+    let current_exe = std::env::current_exe()?;
+    let new_binary = tmp_dir.join("target/release/miam");
+
+    println!("Installing new binary to {}...", current_exe.display());
+    std::fs::copy(&new_binary, &current_exe)?;
+
+    println!("Cleaning up...");
+    std::fs::remove_dir_all(&tmp_dir)?;
+
+    println!("Successfully upgraded miam!");
+    println!("Restart the application to use the new version.");
 
     Ok(())
 }
@@ -161,9 +188,9 @@ fn spawn_refresh_single(source: feed::FeedSource, tx: mpsc::Sender<LoadResult>) 
     spawn_refresh_single_cached(source, tx);
 }
 
-fn spawn_fetch_article(url: String, tx: mpsc::Sender<LoadResult>) {
+fn spawn_fetch_article(url: String, paywall_remover: bool, tx: mpsc::Sender<LoadResult>) {
     thread::spawn(move || {
-        match reader::fetch_article(&url) {
+        match reader::fetch_article(&url, paywall_remover) {
             Ok(article) => {
                 let _ = tx.send(LoadResult::Article(article));
             }
@@ -418,7 +445,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                 if let Some(url) = app.get_selected_url() {
                                     app.article_loading = true;
                                     app.status = "Loading article...".to_string();
-                                    spawn_fetch_article(url, tx.clone());
+                                    spawn_fetch_article(url, app.paywall_remover, tx.clone());
                                 }
                             } else {
                                 app.open_selected();

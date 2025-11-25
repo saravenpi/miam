@@ -1,6 +1,6 @@
 [package]
 name = "miam"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 authors = ["saravenpi"]
 description = "A minimalist RSS feed manager TUI"
@@ -22,4 +22,4 @@ readability = { version = "0.3", default-features = false }
 textwrap = "0.16"
 url = "2.5"
 clap = { version = "4.5", features = ["derive"] }
-self_update = { version = "0.41", default-features = false, features = ["rustls"] }
+urlencoding = "2.1"

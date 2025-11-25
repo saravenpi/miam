@@ -5,7 +5,7 @@ use ratatui::{
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph, Wrap},
+    widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
 
@@ -53,18 +53,31 @@ pub fn render_filter_dialog(f: &mut Frame, app: &App) {
 }
 
 pub fn render_tag_editor(f: &mut Frame, app: &App) {
-    let height = 3 + (app.editing_tags.len() as u16 + 2) / 3;
-    let area = centered_rect(70, height.min(20), f.area());
+    let tag_count = app.editing_tags.len() as u16;
+    let tags_height = if tag_count > 0 {
+        tag_count.div_ceil(3).max(3)
+    } else {
+        0
+    };
+    let total_height = 3 + tags_height + 2;
+    let area = centered_rect(80, total_height.min(25), f.area());
 
     f.render_widget(Clear, area);
 
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3),
-            Constraint::Min(1),
-        ])
-        .split(area);
+    let chunks = if app.editing_tags.is_empty() {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Length(3)])
+            .split(area)
+    } else {
+        Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([
+                Constraint::Length(3),
+                Constraint::Min(4),
+            ])
+            .split(area)
+    };
 
     let tag_input = Paragraph::new(app.tag_input.as_str())
         .style(Style::default().fg(Color::White))
@@ -77,7 +90,11 @@ pub fn render_tag_editor(f: &mut Frame, app: &App) {
     f.render_widget(tag_input, chunks[0]);
 
     if !app.editing_tags.is_empty() {
-        let mut spans = vec![Span::raw(" ")];
+        let mut lines = Vec::new();
+        let mut current_line_spans = Vec::new();
+        let mut current_width = 0;
+        let available_width = chunks[1].width.saturating_sub(4) as usize;
+
         for (i, tag) in app.editing_tags.iter().enumerate() {
             let is_selected = i == app.selected_tag_index;
             let tag_style = if is_selected {
@@ -91,15 +108,28 @@ pub fn render_tag_editor(f: &mut Frame, app: &App) {
                     .bg(Color::DarkGray)
             };
 
-            spans.push(Span::styled(format!(" {} ", tag), tag_style));
-            spans.push(Span::raw(" "));
+            let tag_display = format!(" {} ", tag);
+            let tag_width = tag_display.len() + 1;
+
+            if current_width + tag_width > available_width && !current_line_spans.is_empty() {
+                lines.push(Line::from(current_line_spans.clone()));
+                current_line_spans.clear();
+                current_width = 0;
+            }
+
+            current_line_spans.push(Span::styled(tag_display, tag_style));
+            current_line_spans.push(Span::raw(" "));
+            current_width += tag_width;
         }
 
-        let tags_display = Paragraph::new(Line::from(spans))
-            .wrap(Wrap { trim: false })
+        if !current_line_spans.is_empty() {
+            lines.push(Line::from(current_line_spans));
+        }
+
+        let tags_display = Paragraph::new(lines)
             .block(
                 Block::default()
-                    .title(Span::styled(" Current Tags (Tab/Arrow to select, Del to remove) ", Style::default().fg(SUCCESS)))
+                    .title(Span::styled(" Current Tags (Tab/Arrows to select, Del to remove, Enter to save) ", Style::default().fg(SUCCESS)))
                     .borders(Borders::ALL)
                     .border_style(Style::default().fg(SUCCESS)),
             );

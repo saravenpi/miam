@@ -32,40 +32,6 @@ warn() {
     echo -e "${YELLOW}[WARN]${NC} $1"
 }
 
-# Detect OS and architecture
-detect_platform() {
-    local os arch
-
-    os="$(uname -s)"
-    arch="$(uname -m)"
-
-    case "$os" in
-        Linux)
-            os="linux"
-            ;;
-        Darwin)
-            os="macos"
-            ;;
-        *)
-            error "Unsupported operating system: $os"
-            ;;
-    esac
-
-    case "$arch" in
-        x86_64 | amd64)
-            arch="x86_64"
-            ;;
-        aarch64 | arm64)
-            arch="aarch64"
-            ;;
-        *)
-            error "Unsupported architecture: $arch"
-            ;;
-    esac
-
-    echo "${os}-${arch}"
-}
-
 # Check if a command exists
 command_exists() {
     command -v "$1" >/dev/null 2>&1
@@ -75,56 +41,18 @@ command_exists() {
 check_prerequisites() {
     info "Checking prerequisites..."
 
-    if ! command_exists curl && ! command_exists wget; then
-        error "Neither curl nor wget found. Please install one of them."
-    fi
-}
-
-# Get the latest release version
-get_latest_version() {
-    info "Fetching latest release..."
-
-    if command_exists curl; then
-        curl -sSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
-    elif command_exists wget; then
-        wget -qO- "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/'
-    fi
-}
-
-# Download binary
-download_binary() {
-    local version="$1"
-    local platform="$2"
-    local download_url="https://github.com/${REPO}/releases/download/${version}/${BINARY_NAME}-${platform}"
-
-    info "Downloading ${BINARY_NAME} ${version} for ${platform}..."
-
-    mkdir -p "${INSTALL_DIR}"
-
-    if command_exists curl; then
-        curl -sSL "$download_url" -o "${INSTALL_DIR}/${BINARY_NAME}" || {
-            warn "Pre-built binary not available for ${platform}"
-            return 1
-        }
-    elif command_exists wget; then
-        wget -qO "${INSTALL_DIR}/${BINARY_NAME}" "$download_url" || {
-            warn "Pre-built binary not available for ${platform}"
-            return 1
-        }
+    if ! command_exists cargo; then
+        error "Cargo not found. Please install Rust: https://rustup.rs/"
     fi
 
-    chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
-
-    return 0
+    if ! command_exists git; then
+        error "Git not found. Please install git."
+    fi
 }
 
 # Build from source using cargo
 build_from_source() {
-    info "Pre-built binary not available. Building from source..."
-
-    if ! command_exists cargo; then
-        error "Cargo not found. Please install Rust: https://rustup.rs/"
-    fi
+    info "Building from source..."
 
     local tmp_dir
     tmp_dir="$(mktemp -d)"
@@ -172,23 +100,7 @@ main() {
 
     check_prerequisites
 
-    local platform
-    platform="$(detect_platform)"
-    info "Detected platform: ${platform}"
-
-    local version
-    version="$(get_latest_version)"
-
-    if [ -z "$version" ]; then
-        warn "Could not fetch latest version. Building from source..."
-        build_from_source
-    else
-        info "Latest version: ${version}"
-
-        if ! download_binary "$version" "$platform"; then
-            build_from_source
-        fi
-    fi
+    build_from_source
 
     success "${BINARY_NAME} installed successfully to ${INSTALL_DIR}/${BINARY_NAME}"
 
@@ -202,6 +114,7 @@ main() {
     echo "  2. Press 'a' to add your first RSS feed"
     echo "  3. Press 'r' to refresh feeds"
     echo ""
+    echo "For updates, run: ${BINARY_NAME} upgrade"
     echo "Documentation: https://github.com/${REPO}#readme"
     echo ""
 }
