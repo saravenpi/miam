@@ -444,11 +444,12 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::BackTab => app.toggle_focus(),
                         KeyCode::Enter => {
                             if app.focus == app::Focus::Feeds && !app.sources.is_empty() {
-                                app.loading = true;
                                 if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
+                                    app.loading = true;
                                     app.status = "Loading all feeds...".to_string();
                                     app.current_feed = None;
                                     spawn_refresh_all(app.sources.clone(), tx.clone());
+                                    app.focus = app::Focus::Items;
                                 } else {
                                     let filtered_sources = app.get_filtered_sources();
                                     let display_idx = if app.show_all && app.filter.is_empty() {
@@ -459,12 +460,15 @@ fn run_app<B: ratatui::backend::Backend>(
                                     if display_idx < filtered_sources.len() {
                                         let (original_idx, _) = filtered_sources[display_idx];
                                         let source = app.sources[original_idx].clone();
+                                        app.loading = true;
                                         app.status = format!("Loading {}...", source.name);
                                         app.current_feed = Some(source.name.clone());
                                         spawn_refresh_single(source, tx.clone());
+                                        app.focus = app::Focus::Items;
+                                    } else {
+                                        app.status = format!("Error: Invalid feed index {} (max {})", display_idx, filtered_sources.len());
                                     }
                                 }
-                                app.focus = app::Focus::Items;
                             } else if app.focus == app::Focus::Tags {
                                 app.select_tag();
                             } else if app.focus == app::Focus::Items {
@@ -480,8 +484,8 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Char('d') => app.delete_selected(),
                         KeyCode::Char('r') => {
                             if !app.sources.is_empty() {
-                                app.loading = true;
                                 if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
+                                    app.loading = true;
                                     app.status = "Refreshing all feeds...".to_string();
                                     app.current_feed = None;
                                     spawn_refresh_all(app.sources.clone(), tx.clone());
@@ -495,9 +499,12 @@ fn run_app<B: ratatui::backend::Backend>(
                                     if display_idx < filtered_sources.len() {
                                         let (original_idx, _) = filtered_sources[display_idx];
                                         let source = app.sources[original_idx].clone();
+                                        app.loading = true;
                                         app.status = format!("Refreshing {}...", source.name);
                                         app.current_feed = Some(source.name.clone());
                                         spawn_refresh_single(source, tx.clone());
+                                    } else {
+                                        app.status = format!("Error: Invalid feed index {} (max {})", display_idx, filtered_sources.len());
                                     }
                                 }
                             }
