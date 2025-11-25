@@ -35,8 +35,8 @@ enum Commands {
 }
 
 enum LoadResult {
-    Items(Vec<FeedItem>),
-    BackgroundUpdate(Vec<FeedItem>),
+    Items(Vec<FeedItem>, Option<String>),
+    BackgroundUpdate(Vec<FeedItem>, Option<String>),
     Article(reader::Article),
     ArticleError(String),
     FeedAdded(String, String),
@@ -67,6 +67,7 @@ fn main() -> Result<()> {
     if !app.sources.is_empty() {
         app.loading = true;
         app.status = "Loading all feeds...".to_string();
+        app.current_feed = None;
         spawn_refresh_all(app.sources.clone(), tx.clone());
     }
 
@@ -158,7 +159,7 @@ fn upgrade() -> Result<()> {
 fn spawn_refresh_all_cached(sources: Vec<feed::FeedSource>, tx: mpsc::Sender<LoadResult>) {
     let cached = cache::load_all_cached();
     if !cached.is_empty() {
-        let _ = tx.send(LoadResult::Items(cached));
+        let _ = tx.send(LoadResult::Items(cached, None));
     }
 
     thread::spawn(move || {
@@ -175,14 +176,15 @@ fn spawn_refresh_all_cached(sources: Vec<feed::FeedSource>, tx: mpsc::Sender<Loa
             }
         }
         let all_items = cache::load_all_cached();
-        let _ = tx.send(LoadResult::BackgroundUpdate(all_items));
+        let _ = tx.send(LoadResult::BackgroundUpdate(all_items, None));
     });
 }
 
 fn spawn_refresh_single_cached(source: feed::FeedSource, tx: mpsc::Sender<LoadResult>) {
+    let source_name = source.name.clone();
     if let Some(cached) = cache::load_cached_items(&source.name) {
         if !cached.is_empty() {
-            let _ = tx.send(LoadResult::Items(cached));
+            let _ = tx.send(LoadResult::Items(cached, Some(source_name.clone())));
         }
     }
 
@@ -196,7 +198,7 @@ fn spawn_refresh_single_cached(source: feed::FeedSource, tx: mpsc::Sender<LoadRe
         }
         items.sort_by(|a, b| b.date.cmp(&a.date));
         let merged = cache::merge_and_save(&source.name, items);
-        let _ = tx.send(LoadResult::BackgroundUpdate(merged));
+        let _ = tx.send(LoadResult::BackgroundUpdate(merged, Some(source_name)));
     });
 }
 
@@ -249,23 +251,29 @@ fn run_app<B: ratatui::backend::Backend>(
 
         if let Ok(result) = rx.try_recv() {
             match result {
-                LoadResult::Items(items) => {
-                    app.items = items;
-                    app.loading = false;
-                    app.background_loading = true;
-                    app.item_index = 0;
-                    app.item_list_state.select(Some(0));
-                    app.status = format!("Loaded {} items (cached)", app.items.len());
+                LoadResult::Items(items, feed_name) => {
+                    if app.current_feed == feed_name {
+                        app.items = items;
+                        app.loading = false;
+                        app.background_loading = true;
+                        app.item_index = 0;
+                        app.item_list_state.select(Some(0));
+                        app.status = format!("Loaded {} items (cached)", app.items.len());
+                    }
                 }
-                LoadResult::BackgroundUpdate(items) => {
-                    let old_count = app.items.len();
-                    app.items = items;
-                    app.background_loading = false;
-                    let new_count = app.items.len();
-                    if new_count > old_count {
-                        app.status = format!("Updated: {} items (+{})", new_count, new_count - old_count);
+                LoadResult::BackgroundUpdate(items, feed_name) => {
+                    if app.current_feed == feed_name {
+                        let old_count = app.items.len();
+                        app.items = items;
+                        app.background_loading = false;
+                        let new_count = app.items.len();
+                        if new_count > old_count {
+                            app.status = format!("Updated: {} items (+{})", new_count, new_count - old_count);
+                        } else {
+                            app.status = format!("Updated: {} items", new_count);
+                        }
                     } else {
-                        app.status = format!("Updated: {} items", new_count);
+                        app.background_loading = false;
                     }
                 }
                 LoadResult::Article(article) => {
@@ -439,6 +447,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                 app.loading = true;
                                 if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
                                     app.status = "Loading all feeds...".to_string();
+                                    app.current_feed = None;
                                     spawn_refresh_all(app.sources.clone(), tx.clone());
                                 } else {
                                     let filtered_sources = app.get_filtered_sources();
@@ -451,6 +460,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                         let (original_idx, _) = filtered_sources[display_idx];
                                         let source = app.sources[original_idx].clone();
                                         app.status = format!("Loading {}...", source.name);
+                                        app.current_feed = Some(source.name.clone());
                                         spawn_refresh_single(source, tx.clone());
                                     }
                                 }
@@ -473,6 +483,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                 app.loading = true;
                                 if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
                                     app.status = "Refreshing all feeds...".to_string();
+                                    app.current_feed = None;
                                     spawn_refresh_all(app.sources.clone(), tx.clone());
                                 } else {
                                     let filtered_sources = app.get_filtered_sources();
@@ -485,6 +496,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                         let (original_idx, _) = filtered_sources[display_idx];
                                         let source = app.sources[original_idx].clone();
                                         app.status = format!("Refreshing {}...", source.name);
+                                        app.current_feed = Some(source.name.clone());
                                         spawn_refresh_single(source, tx.clone());
                                     }
                                 }

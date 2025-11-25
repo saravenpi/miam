@@ -46,6 +46,7 @@ pub struct App {
     pub paywall_remover: bool,
     pub browser_command: Option<String>,
     pub hide_shorts: bool,
+    pub current_feed: Option<String>,
 }
 
 impl App {
@@ -90,6 +91,7 @@ impl App {
             paywall_remover: false,
             browser_command: None,
             hide_shorts: false,
+            current_feed: None,
         }
     }
 
