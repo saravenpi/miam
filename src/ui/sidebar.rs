@@ -1,5 +1,5 @@
 use crate::app::{App, Focus};
-use crate::ui::colors::{DIM, PRIMARY, SECONDARY, SUCCESS};
+use crate::ui::colors::{DIM, PRIMARY, SECONDARY, SELECTED_BG, SUCCESS};
 use crate::ui::utils::{feed_icon, truncate};
 use ratatui::{
     layout::{Constraint, Layout, Rect},
@@ -10,13 +10,19 @@ use ratatui::{
 };
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let chunks =
+    let chunks = if app.show_tooltips {
         Layout::vertical([Constraint::Length(4), Constraint::Min(0), Constraint::Length(3)])
-            .split(area);
+            .split(area)
+    } else {
+        Layout::vertical([Constraint::Length(4), Constraint::Min(0)])
+            .split(area)
+    };
 
     render_logo(f, chunks[0]);
     render_feeds_list(f, app, chunks[1]);
-    render_help(f, chunks[2]);
+    if app.show_tooltips {
+        render_help(f, app, chunks[2]);
+    }
 }
 
 fn render_logo(f: &mut Frame, area: Rect) {
@@ -34,31 +40,25 @@ fn render_feeds_list(f: &mut Frame, app: &App, area: Rect) {
 
     if app.show_all && app.filter.is_empty() {
         let selected = app.feed_index == 0;
-        let prefix = if selected { "▸ " } else { "  " };
-        let style = if selected && is_focused {
-            Style::default().fg(Color::Black).bg(SECONDARY).add_modifier(Modifier::BOLD)
-        } else if selected {
-            Style::default().fg(SECONDARY).add_modifier(Modifier::BOLD)
+        let style = if selected {
+            Style::default().fg(SECONDARY).bg(SELECTED_BG)
         } else {
             Style::default().fg(SECONDARY)
         };
-        items.push(ListItem::new(format!("{}★ All", prefix)).style(style));
+        items.push(ListItem::new("  ★ All").style(style));
     }
 
     let filtered_sources = app.get_filtered_sources();
     for (display_idx, (_, source)) in filtered_sources.iter().enumerate() {
         let idx = if app.show_all && app.filter.is_empty() { display_idx + 1 } else { display_idx };
         let selected = idx == app.feed_index;
-        let prefix = if selected { "▸ " } else { "  " };
         let icon = feed_icon(&source.url);
-        let style = if selected && is_focused {
-            Style::default().fg(Color::Black).bg(PRIMARY).add_modifier(Modifier::BOLD)
-        } else if selected {
-            Style::default().fg(PRIMARY).add_modifier(Modifier::BOLD)
+        let style = if selected {
+            Style::default().fg(Color::White).bg(SELECTED_BG)
         } else {
             Style::default().fg(Color::White)
         };
-        items.push(ListItem::new(format!("{}{} {}", prefix, icon, truncate(&source.name, 20))).style(style));
+        items.push(ListItem::new(format!("  {} {}", icon, truncate(&source.name, 20))).style(style));
     }
 
     let feeds_block = Block::default()
@@ -72,7 +72,10 @@ fn render_feeds_list(f: &mut Frame, app: &App, area: Rect) {
     f.render_stateful_widget(feeds_list, area, &mut app.feed_list_state.clone());
 }
 
-fn render_help(f: &mut Frame, area: Rect) {
+fn render_help(f: &mut Frame, app: &App, area: Rect) {
+    if !app.show_tooltips {
+        return;
+    }
     let help = Paragraph::new(vec![
         Line::from(vec![
             Span::styled("a", Style::default().fg(SUCCESS)),

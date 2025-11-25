@@ -1,19 +1,25 @@
 use crate::app::{App, Focus};
-use crate::ui::colors::{DIM, PRIMARY, SECONDARY, SUCCESS};
+use crate::ui::colors::{DIM, PRIMARY, SECONDARY, SELECTED_BG, SUCCESS};
 use crate::ui::utils::{feed_icon, time_ago, truncate};
 use ratatui::{
     layout::{Alignment, Constraint, Layout, Rect},
-    style::{Color, Modifier, Style},
+    style::{Color, Style},
     text::{Line, Span},
     widgets::{Block, Borders, List, ListItem, Paragraph},
     Frame,
 };
 
 pub fn render(f: &mut Frame, app: &App, area: Rect) {
-    let chunks = Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).split(area);
+    let chunks = if app.show_tooltips {
+        Layout::vertical([Constraint::Min(0), Constraint::Length(3)]).split(area)
+    } else {
+        Layout::vertical([Constraint::Min(0)]).split(area)
+    };
 
     render_feed_items(f, app, chunks[0]);
-    render_status(f, app, chunks[1]);
+    if app.show_tooltips {
+        render_status(f, app, chunks[1]);
+    }
 }
 
 fn render_feed_items(f: &mut Frame, app: &App, area: Rect) {
@@ -69,13 +75,10 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
         .enumerate()
         .map(|(display_idx, (_, item))| {
             let selected = display_idx == app.item_index;
-            let prefix = if selected { "▸ " } else { "  " };
             let date = item.date.format("%m/%d").to_string();
             let relative = time_ago(&item.date);
-            let style = if selected && is_focused {
-                Style::default().fg(Color::Black).bg(PRIMARY).add_modifier(Modifier::BOLD)
-            } else if selected {
-                Style::default().fg(PRIMARY).add_modifier(Modifier::BOLD)
+            let style = if selected {
+                Style::default().fg(Color::White).bg(SELECTED_BG)
             } else {
                 Style::default().fg(Color::White)
             };
@@ -85,12 +88,12 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
             let title = truncate(&item.title, available_width);
 
             let first_line = Line::from(vec![
-                Span::raw(prefix),
+                Span::raw("  "),
                 Span::styled(format!("{} ", icon), Style::default().fg(SECONDARY)),
                 Span::raw(title),
             ]);
 
-            let metadata = format!("  {} • {} • {}", date, relative, truncate(&item.source_name, 15));
+            let metadata = format!("    {} • {} • {}", date, relative, truncate(&item.source_name, 15));
             let second_line = Line::from(vec![
                 Span::styled(metadata, Style::default().fg(DIM)),
             ]);
@@ -112,6 +115,10 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
 }
 
 fn render_status(f: &mut Frame, app: &App, area: Rect) {
+    if !app.show_tooltips {
+        return;
+    }
+
     let status_text = if app.loading || app.background_loading {
         format!("{} {}", app.spinner_char(), app.status)
     } else {

@@ -34,6 +34,7 @@ pub struct App {
     pub article_loading: bool,
     pub filter_mode: bool,
     pub filter: String,
+    pub show_tooltips: bool,
 }
 
 impl App {
@@ -66,6 +67,7 @@ impl App {
             article_loading: false,
             filter_mode: false,
             filter: String::new(),
+            show_tooltips: true,
         }
     }
 
@@ -118,6 +120,7 @@ impl App {
         if let Some(config) = Config::load() {
             self.use_invidious = config.settings.invidious;
             self.invidious_instance = config.get_invidious_instance().to_string();
+            self.show_tooltips = config.settings.show_tooltips;
             self.sources = config.sources;
         }
     }
@@ -128,6 +131,7 @@ impl App {
             settings: crate::config::Settings {
                 invidious: self.use_invidious,
                 invidious_instance: Some(self.invidious_instance.clone()),
+                show_tooltips: self.show_tooltips,
             },
         };
         config.save();

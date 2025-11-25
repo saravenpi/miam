@@ -18,6 +18,12 @@ pub struct Settings {
     pub invidious: bool,
     #[serde(default)]
     pub invidious_instance: Option<String>,
+    #[serde(default = "default_show_tooltips")]
+    pub show_tooltips: bool,
+}
+
+fn default_show_tooltips() -> bool {
+    true
 }
 
 pub struct Config {
@@ -77,6 +83,7 @@ impl Config {
                 settings: Settings {
                     invidious: self.settings.invidious,
                     invidious_instance: self.settings.invidious_instance.clone(),
+                    show_tooltips: self.settings.show_tooltips,
                 },
             };
             if let Ok(content) = serde_yaml::to_string(&config_file) {
