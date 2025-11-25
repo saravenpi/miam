@@ -7,9 +7,11 @@ A minimalist RSS feed reader TUI (Terminal User Interface) built with Rust.
 - **Clean Terminal Interface** - Navigate RSS feeds with vim-like keybindings
 - **Multi-Source Support** - Manage multiple RSS/Atom feeds from one place
 - **Smart Caching** - Offline access to previously loaded articles
-- **Built-in Reader** - Read full articles without leaving the terminal
+- **Enhanced Built-in Reader** - Read full articles with beautiful formatting (headers, bold, italic, lists)
+- **Paywall Remover** - Bypass paywalls using multiple strategies (12ft.io, archive.is, Googlebot)
 - **YouTube Support** - RSS feeds for YouTube channels with optional Invidious integration
 - **Filter & Search** - Quickly filter feeds and articles in real-time
+- **Tag System** - Organize feeds with custom tags
 - **Dual-Line Display** - Clear two-line layout for better readability
 
 ## Installation
@@ -24,14 +26,18 @@ curl -sSL https://raw.githubusercontent.com/saravenpi/miam/master/install.sh | b
 
 The installer will:
 - Detect your platform automatically (Linux/macOS, x86_64/aarch64)
-- Download pre-built binary (if available)
-- Or build from source using cargo (requires Rust installed)
+- Build from source using cargo (requires Rust and Git installed)
 - Install to `~/.local/bin/miam`
 - Provide instructions for adding to PATH if needed
 
-**Note:** If you don't have Rust installed and pre-built binaries aren't available, install Rust first:
+**Prerequisites:**
 ```bash
+# Install Rust
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+# Install Git (if not already installed)
+# On macOS: git is included with Xcode Command Line Tools
+# On Linux: sudo apt install git (Debian/Ubuntu) or sudo yum install git (RHEL/Fedora)
 ```
 
 ### Manual Installation from Source
@@ -97,21 +103,25 @@ miam --version
 
 ### Upgrade to Latest Version
 
-Miam includes a built-in self-update mechanism that downloads the latest release from GitHub:
+Miam includes a built-in self-update mechanism that rebuilds from the latest source:
 
 ```bash
 miam upgrade
 ```
 
 This will:
-- Check for the latest release on GitHub
-- Download and install the new version if available
-- Show a progress bar during download
+- Clone the latest version from GitHub
+- Build from source using cargo
 - Replace the current binary with the new version
+- Clean up temporary build files
+
+**Note:** Requires Rust and Git to be installed.
 
 ## Configuration
 
 miam uses a YAML configuration file located at `~/.miam.yml`.
+
+A comprehensive example configuration file is available at [`example-config.yml`](example-config.yml) with detailed comments explaining all options.
 
 ### Example Configuration
 
@@ -120,31 +130,65 @@ feeds:
   Hacker News: https://news.ycombinator.com/rss
   Rust Blog: https://blog.rust-lang.org/feed.xml
   The Verge: https://www.theverge.com/rss/index.xml
-  Tech Crunch: https://techcrunch.com/feed/
-  Ars Technica: https://feeds.arstechnica.com/arstechnica/index
+  Tech Crunch:
+    url: https://techcrunch.com/feed/
+    tags:
+      - tech
+      - news
+  Ars Technica:
+    url: https://feeds.arstechnica.com/arstechnica/index
+    tags:
+      - tech
+      - science
 
 settings:
   invidious: false
   invidious_instance: yewtu.be
+  show_tooltips: true
+  paywall_remover: false
 ```
 
 ### Configuration Options
 
 #### Feeds Section
 
-The `feeds` section is a key-value map where:
-- **Key**: Display name for the feed
-- **Value**: RSS/Atom feed URL
+The `feeds` section supports two formats:
+
+**Simple format** (feed URL only):
+```yaml
+Feed Name: https://feed.url/rss
+```
+
+**Extended format** (with tags):
+```yaml
+Feed Name:
+  url: https://feed.url/rss
+  tags:
+    - tag1
+    - tag2
+```
+
+Tags allow you to organize feeds into categories. You can filter by tags in the UI by selecting them from the Tags panel (use Tab to switch to it).
 
 #### Settings Section
 
-- `invidious` (boolean, default: `false`)
+- **`invidious`** (boolean, default: `false`)
   - When enabled, YouTube links open through an Invidious instance instead of YouTube.com
   - Useful for privacy-conscious users
 
-- `invidious_instance` (string, default: `yewtu.be`)
+- **`invidious_instance`** (string, default: `yewtu.be`)
   - Specifies which Invidious instance to use
   - Available instances: `yewtu.be`, `vid.puffyan.us`, `invidious.flokinet.to`, `invidious.privacydev.net`, `iv.melmac.space`
+
+- **`show_tooltips`** (boolean, default: `true`)
+  - Show helpful keyboard shortcuts and tips in the UI
+  - Set to `false` for a cleaner interface
+
+- **`paywall_remover`** (boolean, default: `false`)
+  - Enable paywall bypass when reading articles in the integrated reader
+  - Uses multiple strategies: 12ft.io proxy, archive.is, and Googlebot user-agent
+  - Falls back to direct fetch if all methods fail
+  - **Note:** Only works with soft paywalls; hard paywalls cannot be bypassed
 
 ## Keybindings
 
@@ -171,6 +215,7 @@ The `feeds` section is a key-value map where:
 |-----|--------|
 | `a` | Add new feed |
 | `d` | Delete selected feed |
+| `t` | Edit tags for selected feed |
 | `r` | Refresh all feeds |
 | `Enter` | Load selected feed (when in Feeds panel) |
 
@@ -193,6 +238,12 @@ The `feeds` section is a key-value map where:
 
 ### Reader Mode
 
+The integrated reader displays articles with beautiful formatting:
+- **Headers** are syntax-highlighted (H1, H2, H3)
+- **Bold** and *italic* text are styled
+- **Lists** are rendered with bullet points
+- **Blockquotes** are indented
+
 | Key | Action |
 |-----|--------|
 | `j` / `↓` | Scroll down |
@@ -203,6 +254,8 @@ The `feeds` section is a key-value map where:
 | `G` | Jump to bottom |
 | `o` | Open article in browser |
 | `Esc` / `q` | Exit reader mode |
+
+**Paywall Bypass:** If `paywall_remover` is enabled in settings, the reader will automatically attempt to bypass paywalls using multiple strategies.
 
 ## Usage Examples
 
@@ -274,11 +327,18 @@ A note appears in the status bar when YouTube feeds are present.
 
 4. **Reading Articles**:
    - YouTube videos automatically open in browser
-   - Regular articles can be read in-app (press `o`) or in browser (press `o` again when YouTube or `Enter`)
+   - Regular articles can be read in the integrated reader (press `o`)
+   - Reader supports formatted text with headers, bold, italic, and lists
+   - Enable `paywall_remover` in settings to bypass soft paywalls
 
-5. **Filter Performance**: Filtering is case-insensitive and works on substrings
+5. **Organizing with Tags**:
+   - Press `t` on a feed to edit its tags
+   - Navigate to the Tags panel to filter by tag
+   - Tags help organize large feed collections
 
-6. **Background Updates**: When feeds refresh, you'll see a spinner. The UI remains responsive.
+6. **Filter Performance**: Filtering is case-insensitive and works on substrings
+
+7. **Background Updates**: When feeds refresh, you'll see a spinner. The UI remains responsive.
 
 ## Troubleshooting
 

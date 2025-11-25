@@ -1,0 +1,133 @@
+# miam RSS Reader - Example Configuration File
+# Location: ~/.miam.yml
+#
+# This file demonstrates all available configuration options.
+# Copy this to ~/.miam.yml and customize to your needs.
+
+# ============================================================================
+# FEEDS SECTION
+# ============================================================================
+# Define your RSS/Atom feeds here.
+#
+# Simple format (URL only):
+#   Feed Name: https://example.com/feed.xml
+#
+# Extended format (with tags):
+#   Feed Name:
+#     url: https://example.com/feed.xml
+#     tags:
+#       - category1
+#       - category2
+
+feeds:
+  # Technology News
+  Hacker News: https://news.ycombinator.com/rss
+
+  Ars Technica:
+    url: https://feeds.arstechnica.com/arstechnica/index
+    tags:
+      - tech
+      - news
+
+  The Verge:
+    url: https://www.theverge.com/rss/index.xml
+    tags:
+      - tech
+      - news
+
+  Tech Crunch:
+    url: https://techcrunch.com/feed/
+    tags:
+      - tech
+      - startups
+
+  # Programming & Development
+  Rust Blog:
+    url: https://blog.rust-lang.org/feed.xml
+    tags:
+      - programming
+      - rust
+
+  GitHub Blog:
+    url: https://github.blog/feed/
+    tags:
+      - programming
+      - devtools
+
+  # YouTube Channels (RSS format)
+  Fireship:
+    url: https://www.youtube.com/feeds/videos.xml?channel_id=UCsBjURrPoezykLs9EqgamOA
+    tags:
+      - programming
+      - youtube
+
+  # Science & Research
+  NASA:
+    url: https://www.nasa.gov/rss/dyn/breaking_news.rss
+    tags:
+      - science
+      - space
+
+# ============================================================================
+# SETTINGS SECTION
+# ============================================================================
+
+settings:
+  # Invidious Integration (YouTube Privacy Frontend)
+  # When enabled, YouTube links open through Invidious instead of YouTube.com
+  # Type: boolean
+  # Default: false
+  invidious: false
+
+  # Invidious Instance
+  # Which Invidious instance to use when invidious is enabled
+  # Type: string
+  # Default: "yewtu.be"
+  # Available instances: yewtu.be, vid.puffyan.us, invidious.flokinet.to,
+  #                      invidious.privacydev.net, iv.melmac.space
+  invidious_instance: yewtu.be
+
+  # Show Tooltips
+  # Display helpful keyboard shortcuts and tips in the UI
+  # Type: boolean
+  # Default: true
+  show_tooltips: true
+
+  # Paywall Remover
+  # Enable automatic paywall bypass when reading articles in the integrated reader
+  # Uses multiple strategies: 12ft.io proxy, archive.is, and Googlebot user-agent
+  # Falls back to direct fetch if all methods fail
+  # Type: boolean
+  # Default: false
+  # Note: Only works with soft paywalls; hard server-side paywalls cannot be bypassed
+  paywall_remover: false
+
+# ============================================================================
+# TIPS
+# ============================================================================
+#
+# 1. Tags Organization:
+#    - Use tags to categorize feeds (e.g., tech, news, programming)
+#    - Access tags panel with Tab key in the UI
+#    - Filter articles by selecting a tag
+#
+# 2. YouTube Feeds:
+#    - Format: https://www.youtube.com/feeds/videos.xml?channel_id=CHANNEL_ID
+#    - Limited to 15 most recent videos (YouTube RSS limitation)
+#
+# 3. Managing Feeds:
+#    - Add feeds: Press 'a' in the UI
+#    - Delete feeds: Press 'd' on selected feed
+#    - Edit tags: Press 't' on selected feed
+#    - Or manually edit this file and restart miam
+#
+# 4. Paywall Bypass:
+#    - Enable paywall_remover to access paywalled articles
+#    - Works best with soft paywalls (JavaScript-based)
+#    - May not work with hard paywalls (server-side blocking)
+#    - Respects website terms of service at your own discretion
+#
+# 5. Configuration Location:
+#    - This file should be saved as: ~/.miam.yml
+#    - Reload: Restart miam to apply changes
+#    - Backup: Keep a copy of this file for safekeeping
