@@ -242,27 +242,6 @@ Cache files are named based on the feed name (sanitized):
 
 A note appears in the status bar when YouTube feeds are present.
 
-## UI Layout
-
-```
-┌─────────────────────────────┬──────────────────────────────────────┐
-│  miam                       │ Feed                                 │
-│  RSS Reader                 │                                      │
-├─────────────────────────────┤                                      │
-│ Feeds                       │  ▸ ▶ Article Title                   │
-│                             │      MM/DD • X hours ago • Source    │
-│  ▸ ★ All                    │                                      │
-│    ▶ Fireship               │    ◆ Another Article                 │
-│    ◆ Hacker News            │      MM/DD • X days ago • Source     │
-│    ◆ Rust Blog              │                                      │
-│                             │                                      │
-├─────────────────────────────┤                                      │
-│ a add  d del  r refresh     │                                      │
-└─────────────────────────────┴──────────────────────────────────────┘
-│ Tab switch  o open  q quit                                         │
-└────────────────────────────────────────────────────────────────────┘
-```
-
 ## Tips & Tricks
 
 1. **Quick Refresh**: Press `r` from any panel to refresh all feeds
