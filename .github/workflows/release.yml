@@ -65,10 +65,4 @@ jobs:
           asset_name: ${{ matrix.asset_name }}
           tag: ${{ github.ref }}
           overwrite: true
-          release_name: "v${{ github.ref_name }} - Interactive Tag Editor"
-          body: |
-            ## ✨ Interactive Tag Editor
-
-            Binaries for multiple platforms. Download the appropriate version for your system.
-
-            See full release notes at https://github.com/saravenpi/miam/releases/tag/${{ github.ref_name }}
+          make_latest: false
