@@ -41,6 +41,8 @@ pub struct App {
     pub tag_input: String,
     pub tag_index: usize,
     pub tag_list_state: ListState,
+    pub editing_tags: Vec<String>,
+    pub selected_tag_index: usize,
 }
 
 impl App {
@@ -80,6 +82,8 @@ impl App {
             tag_input: String::new(),
             tag_index: 0,
             tag_list_state,
+            editing_tags: Vec::new(),
+            selected_tag_index: 0,
         }
     }
 
@@ -470,20 +474,48 @@ impl App {
             if idx < self.sources.len() {
                 self.tag_editor_mode = true;
                 self.tag_input.clear();
+                self.editing_tags = self.sources[idx].tags.clone();
+                self.selected_tag_index = 0;
                 self.status = format!(
-                    "Add tags to '{}' (comma-separated):",
+                    "Edit tags for '{}' (Enter to add, Tab/arrows to select, Del to remove):",
                     self.sources[idx].name
                 );
             }
         }
     }
 
-    pub fn submit_tags(&mut self) {
-        if self.tag_input.is_empty() {
-            self.cancel_tag_editor();
-            return;
+    pub fn add_tag_from_input(&mut self) {
+        let tag = self.tag_input.trim().to_string();
+        if !tag.is_empty() && !self.editing_tags.contains(&tag) {
+            self.editing_tags.push(tag);
+            self.tag_input.clear();
         }
+    }
 
+    pub fn remove_selected_tag(&mut self) {
+        if self.selected_tag_index < self.editing_tags.len() {
+            self.editing_tags.remove(self.selected_tag_index);
+            if self.selected_tag_index > 0 && self.selected_tag_index >= self.editing_tags.len() {
+                self.selected_tag_index = self.editing_tags.len().saturating_sub(1);
+            }
+        }
+    }
+
+    pub fn next_tag(&mut self) {
+        if !self.editing_tags.is_empty() {
+            self.selected_tag_index = (self.selected_tag_index + 1) % self.editing_tags.len();
+        }
+    }
+
+    pub fn previous_tag(&mut self) {
+        if !self.editing_tags.is_empty() {
+            self.selected_tag_index = self.selected_tag_index
+                .checked_sub(1)
+                .unwrap_or(self.editing_tags.len() - 1);
+        }
+    }
+
+    pub fn submit_tags(&mut self) {
         let idx = if self.show_all && self.feed_index > 0 {
             self.feed_index - 1
         } else if !self.show_all {
@@ -494,20 +526,9 @@ impl App {
         };
 
         if idx < self.sources.len() {
-            let new_tags: Vec<String> = self.tag_input
-                .split(',')
-                .map(|s| s.trim().to_string())
-                .filter(|s| !s.is_empty())
-                .collect();
-
-            for tag in new_tags {
-                if !self.sources[idx].tags.contains(&tag) {
-                    self.sources[idx].tags.push(tag);
-                }
-            }
-
+            self.sources[idx].tags = self.editing_tags.clone();
             self.save_config();
-            self.status = "Tags added".to_string();
+            self.status = "Tags updated".to_string();
         }
 
         self.cancel_tag_editor();
@@ -516,6 +537,8 @@ impl App {
     pub fn cancel_tag_editor(&mut self) {
         self.tag_editor_mode = false;
         self.tag_input.clear();
+        self.editing_tags.clear();
+        self.selected_tag_index = 0;
         self.status.clear();
     }
 

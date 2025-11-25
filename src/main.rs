@@ -279,11 +279,40 @@ fn run_app<B: ratatui::backend::Backend>(
 
                 if app.tag_editor_mode {
                     match key.code {
-                        KeyCode::Enter => app.submit_tags(),
+                        KeyCode::Enter => {
+                            if app.tag_input.is_empty() {
+                                app.submit_tags();
+                            } else {
+                                app.add_tag_from_input();
+                            }
+                        }
                         KeyCode::Esc => app.cancel_tag_editor(),
                         KeyCode::Char(c) => app.tag_input.push(c),
                         KeyCode::Backspace => {
-                            app.tag_input.pop();
+                            if app.tag_input.is_empty() {
+                                app.remove_selected_tag();
+                            } else {
+                                app.tag_input.pop();
+                            }
+                        }
+                        KeyCode::Delete => {
+                            app.remove_selected_tag();
+                        }
+                        KeyCode::Tab => {
+                            app.next_tag();
+                        }
+                        KeyCode::BackTab => {
+                            app.previous_tag();
+                        }
+                        KeyCode::Left | KeyCode::Up => {
+                            if app.tag_input.is_empty() {
+                                app.previous_tag();
+                            }
+                        }
+                        KeyCode::Right | KeyCode::Down => {
+                            if app.tag_input.is_empty() {
+                                app.next_tag();
+                            }
                         }
                         _ => {}
                     }
