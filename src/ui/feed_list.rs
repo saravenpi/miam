@@ -101,7 +101,19 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
                 ""
             };
 
-            let metadata = format!("    {} • {}{} • {}", date, relative, video_type, truncate(&item.source_name, 15));
+            // Calculate available width for source name
+            let fixed_parts = format!("    {} • {}{} • ", date, relative, video_type);
+            let fixed_width = fixed_parts.len();
+            let available_width = area.width.saturating_sub(6) as usize;
+            let source_max_width = available_width.saturating_sub(fixed_width);
+
+            let source_display = if source_max_width > 10 {
+                truncate(&item.source_name, source_max_width)
+            } else {
+                truncate(&item.source_name, 15)
+            };
+
+            let metadata = format!("{}{}", fixed_parts, source_display);
             let second_line = Line::from(vec![
                 Span::styled(metadata, Style::default().fg(DIM)),
             ]);

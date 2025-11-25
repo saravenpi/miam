@@ -331,6 +331,7 @@ fn run_app<B: ratatui::backend::Backend>(
                                 app.submit_tags();
                             } else {
                                 app.add_tag_from_input();
+                                app.submit_tags();
                             }
                         }
                         KeyCode::Esc => app.cancel_tag_editor(),

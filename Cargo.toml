@@ -1,6 +1,6 @@
 [package]
 name = "miam"
-version = "0.6.2"
+version = "0.6.3"
 edition = "2021"
 authors = ["saravenpi"]
 description = "A minimalist RSS feed manager TUI"
