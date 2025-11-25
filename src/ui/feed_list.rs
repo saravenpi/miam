@@ -97,7 +97,7 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
             ]);
 
             let video_type = if item.is_youtube_short {
-                " • Short"
+                " • 📱 Short"
             } else if item.link.as_ref().map(|l| l.contains("youtube.com") || l.contains("youtu.be")).unwrap_or(false) {
                 " • Video"
             } else {
@@ -117,8 +117,9 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
             };
 
             let metadata = format!("{}{}", fixed_parts, source_display);
+            let short_color = if item.is_youtube_short { Color::Rgb(255, 165, 0) } else { DIM };
             let second_line = Line::from(vec![
-                Span::styled(metadata, Style::default().fg(DIM)),
+                Span::styled(metadata, Style::default().fg(short_color)),
             ]);
 
             ListItem::new(vec![first_line, second_line])
