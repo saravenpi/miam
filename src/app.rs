@@ -324,12 +324,21 @@ impl App {
         self.filter_mode = false;
         self.filter.clear();
         self.status.clear();
-        self.feed_index = 0;
-        self.item_index = 0;
-        self.tag_index = 0;
-        self.feed_list_state.select(Some(0));
-        self.item_list_state.select(Some(0));
-        self.tag_list_state.select(Some(0));
+        match self.focus {
+            Focus::Feeds => {
+                self.feed_index = 0;
+                self.feed_list_state.select(Some(0));
+            }
+            Focus::Items => {
+                self.item_index = 0;
+                self.item_list_state.select(Some(0));
+            }
+            Focus::Tags => {
+                self.tag_index = 0;
+                self.tag_list_state.select(Some(0));
+            }
+            Focus::Reader => {}
+        }
     }
 
     pub fn get_filtered_sources(&self) -> Vec<(usize, &FeedSource)> {

@@ -378,21 +378,39 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Esc => app.clear_filter(),
                         KeyCode::Char(c) => {
                             app.filter.push(c);
-                            app.feed_index = 0;
-                            app.item_index = 0;
-                            app.tag_index = 0;
-                            app.feed_list_state.select(Some(0));
-                            app.item_list_state.select(Some(0));
-                            app.tag_list_state.select(Some(0));
+                            match app.focus {
+                                app::Focus::Feeds => {
+                                    app.feed_index = 0;
+                                    app.feed_list_state.select(Some(0));
+                                }
+                                app::Focus::Items => {
+                                    app.item_index = 0;
+                                    app.item_list_state.select(Some(0));
+                                }
+                                app::Focus::Tags => {
+                                    app.tag_index = 0;
+                                    app.tag_list_state.select(Some(0));
+                                }
+                                _ => {}
+                            }
                         }
                         KeyCode::Backspace => {
                             app.filter.pop();
-                            app.feed_index = 0;
-                            app.item_index = 0;
-                            app.tag_index = 0;
-                            app.feed_list_state.select(Some(0));
-                            app.item_list_state.select(Some(0));
-                            app.tag_list_state.select(Some(0));
+                            match app.focus {
+                                app::Focus::Feeds => {
+                                    app.feed_index = 0;
+                                    app.feed_list_state.select(Some(0));
+                                }
+                                app::Focus::Items => {
+                                    app.item_index = 0;
+                                    app.item_list_state.select(Some(0));
+                                }
+                                app::Focus::Tags => {
+                                    app.tag_index = 0;
+                                    app.tag_list_state.select(Some(0));
+                                }
+                                _ => {}
+                            }
                         }
                         _ => {}
                     }
