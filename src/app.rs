@@ -44,6 +44,7 @@ pub struct App {
     pub editing_tags: Vec<String>,
     pub selected_tag_index: usize,
     pub paywall_remover: bool,
+    pub browser_command: Option<String>,
 }
 
 impl App {
@@ -86,6 +87,7 @@ impl App {
             editing_tags: Vec::new(),
             selected_tag_index: 0,
             paywall_remover: false,
+            browser_command: None,
         }
     }
 
@@ -151,6 +153,7 @@ impl App {
             self.invidious_instance = config.get_invidious_instance().to_string();
             self.show_tooltips = config.settings.show_tooltips;
             self.paywall_remover = config.settings.paywall_remover;
+            self.browser_command = config.settings.browser_command;
             self.sources = config.sources;
         }
     }
@@ -163,6 +166,7 @@ impl App {
                 invidious_instance: Some(self.invidious_instance.clone()),
                 show_tooltips: self.show_tooltips,
                 paywall_remover: self.paywall_remover,
+                browser_command: self.browser_command.clone(),
             },
         };
         config.save();
@@ -371,6 +375,21 @@ impl App {
         filtered.get(self.item_index).map(|(_, item)| *item)
     }
 
+    pub fn open_url(&self, url: &str) {
+        if let Some(browser_cmd) = &self.browser_command {
+            let _ = std::process::Command::new(browser_cmd).arg(url).spawn();
+        } else {
+            #[cfg(target_os = "macos")]
+            let opener = "open";
+            #[cfg(target_os = "linux")]
+            let opener = "xdg-open";
+            #[cfg(target_os = "windows")]
+            let opener = "start";
+
+            let _ = std::process::Command::new(opener).arg(url).spawn();
+        }
+    }
+
     pub fn open_selected(&mut self) {
         if self.focus == Focus::Items {
             if let Some(item) = self.get_selected_item() {
@@ -380,7 +399,7 @@ impl App {
                     } else {
                         link.clone()
                     };
-                    let _ = std::process::Command::new("open").arg(&url).spawn();
+                    self.open_url(&url);
                 }
             }
         }

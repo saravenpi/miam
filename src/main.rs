@@ -316,7 +316,7 @@ fn run_app<B: ratatui::backend::Backend>(
                         }
                         KeyCode::Char('o') => {
                             if let Some(url) = app.get_selected_url() {
-                                let _ = std::process::Command::new("open").arg(&url).spawn();
+                                app.open_url(&url);
                             }
                         }
                         _ => {}

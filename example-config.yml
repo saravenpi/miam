@@ -101,6 +101,15 @@ show_tooltips: true
 # Note: Only works with soft paywalls; hard server-side paywalls cannot be bypassed
 paywall_remover: true
 
+# Browser Command
+# Custom command to use for opening links in browser
+# If not set, the system default will be used (open on macOS, xdg-open on Linux, start on Windows)
+# The URL will be passed as an argument to the specified command
+# Type: string (optional)
+# Default: none (uses system default)
+# Examples: calm, firefox, chromium, brave, etc.
+# browser_command: calm
+
 # ============================================================================
 # TIPS
 # ============================================================================

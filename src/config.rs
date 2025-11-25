@@ -22,6 +22,8 @@ pub struct Settings {
     pub show_tooltips: bool,
     #[serde(default = "default_paywall_remover")]
     pub paywall_remover: bool,
+    #[serde(default)]
+    pub browser_command: Option<String>,
 }
 
 fn default_show_tooltips() -> bool {
@@ -56,6 +58,8 @@ struct ConfigFile {
     show_tooltips: bool,
     #[serde(default = "default_paywall_remover")]
     paywall_remover: bool,
+    #[serde(default)]
+    browser_command: Option<String>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -96,6 +100,7 @@ impl Config {
                     invidious_instance: config_file.invidious_instance,
                     show_tooltips: config_file.show_tooltips,
                     paywall_remover: config_file.paywall_remover,
+                    browser_command: config_file.browser_command,
                 },
             });
         }
@@ -159,6 +164,7 @@ impl Config {
                 invidious_instance: self.settings.invidious_instance.clone(),
                 show_tooltips: self.settings.show_tooltips,
                 paywall_remover: self.settings.paywall_remover,
+                browser_command: self.settings.browser_command.clone(),
             };
             if let Ok(content) = serde_yaml::to_string(&config_file) {
                 let _ = fs::write(path, content);

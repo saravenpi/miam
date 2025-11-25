@@ -145,6 +145,7 @@ invidious: false
 invidious_instance: yewtu.be
 show_tooltips: true
 paywall_remover: true
+browser_command: calm
 ```
 
 ### Configuration Options
@@ -190,6 +191,12 @@ All settings are defined at the root level of the config file, alongside the `fe
   - Uses multiple strategies: 12ft.io proxy, archive.is, and Googlebot user-agent
   - Falls back to direct fetch if all methods fail
   - **Note:** Only works with soft paywalls; hard paywalls cannot be bypassed
+
+- **`browser_command`** (string, optional)
+  - Custom command to use for opening links in browser
+  - If not set, the system default browser will be used (`open` on macOS, `xdg-open` on Linux, `start` on Windows)
+  - The URL will be passed as an argument to the specified command
+  - Example: `calm`, `firefox`, `chromium`, etc.
 
 ## Keybindings
 
