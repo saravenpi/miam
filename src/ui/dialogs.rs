@@ -62,7 +62,7 @@ pub fn render_tag_editor(f: &mut Frame, app: &App) {
     let total_height = 3 + tags_height;
 
     let dialog_width = (f.area().width * 80 / 100).max(40);
-    let dialog_height = total_height.min(25).max(5);
+    let dialog_height = total_height.min(25);
     let area = centered_rect(dialog_width, dialog_height, f.area());
 
     f.render_widget(Clear, area);
