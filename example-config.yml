@@ -72,35 +72,34 @@ feeds:
 # SETTINGS SECTION
 # ============================================================================
 
-settings:
-  # Invidious Integration (YouTube Privacy Frontend)
-  # When enabled, YouTube links open through Invidious instead of YouTube.com
-  # Type: boolean
-  # Default: false
-  invidious: false
+# Invidious Integration (YouTube Privacy Frontend)
+# When enabled, YouTube links open through Invidious instead of YouTube.com
+# Type: boolean
+# Default: false
+invidious: false
 
-  # Invidious Instance
-  # Which Invidious instance to use when invidious is enabled
-  # Type: string
-  # Default: "yewtu.be"
-  # Available instances: yewtu.be, vid.puffyan.us, invidious.flokinet.to,
-  #                      invidious.privacydev.net, iv.melmac.space
-  invidious_instance: yewtu.be
+# Invidious Instance
+# Which Invidious instance to use when invidious is enabled
+# Type: string
+# Default: "yewtu.be"
+# Available instances: yewtu.be, vid.puffyan.us, invidious.flokinet.to,
+#                      invidious.privacydev.net, iv.melmac.space
+invidious_instance: yewtu.be
 
-  # Show Tooltips
-  # Display helpful keyboard shortcuts and tips in the UI
-  # Type: boolean
-  # Default: true
-  show_tooltips: true
+# Show Tooltips
+# Display helpful keyboard shortcuts and tips in the UI
+# Type: boolean
+# Default: true
+show_tooltips: true
 
-  # Paywall Remover
-  # Enable automatic paywall bypass when reading articles in the integrated reader
-  # Uses multiple strategies: 12ft.io proxy, archive.is, and Googlebot user-agent
-  # Falls back to direct fetch if all methods fail
-  # Type: boolean
-  # Default: false
-  # Note: Only works with soft paywalls; hard server-side paywalls cannot be bypassed
-  paywall_remover: false
+# Paywall Remover
+# Enable automatic paywall bypass when reading articles in the integrated reader
+# Uses multiple strategies: 12ft.io proxy, archive.is, and Googlebot user-agent
+# Falls back to direct fetch if all methods fail
+# Type: boolean
+# Default: true
+# Note: Only works with soft paywalls; hard server-side paywalls cannot be bypassed
+paywall_remover: true
 
 # ============================================================================
 # TIPS

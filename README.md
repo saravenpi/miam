@@ -141,11 +141,10 @@ feeds:
       - tech
       - science
 
-settings:
-  invidious: false
-  invidious_instance: yewtu.be
-  show_tooltips: true
-  paywall_remover: false
+invidious: false
+invidious_instance: yewtu.be
+show_tooltips: true
+paywall_remover: true
 ```
 
 ### Configuration Options
@@ -170,7 +169,9 @@ Feed Name:
 
 Tags allow you to organize feeds into categories. You can filter by tags in the UI by selecting them from the Tags panel (use Tab to switch to it).
 
-#### Settings Section
+#### Settings
+
+All settings are defined at the root level of the config file, alongside the `feeds` section:
 
 - **`invidious`** (boolean, default: `false`)
   - When enabled, YouTube links open through an Invidious instance instead of YouTube.com
@@ -184,7 +185,7 @@ Tags allow you to organize feeds into categories. You can filter by tags in the 
   - Show helpful keyboard shortcuts and tips in the UI
   - Set to `false` for a cleaner interface
 
-- **`paywall_remover`** (boolean, default: `false`)
+- **`paywall_remover`** (boolean, default: `true`)
   - Enable paywall bypass when reading articles in the integrated reader
   - Uses multiple strategies: 12ft.io proxy, archive.is, and Googlebot user-agent
   - Falls back to direct fetch if all methods fail

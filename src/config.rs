@@ -49,6 +49,20 @@ struct ConfigFile {
     #[serde(default)]
     feeds: IndexMap<String, FeedEntry>,
     #[serde(default)]
+    invidious: bool,
+    #[serde(default)]
+    invidious_instance: Option<String>,
+    #[serde(default = "default_show_tooltips")]
+    show_tooltips: bool,
+    #[serde(default = "default_paywall_remover")]
+    paywall_remover: bool,
+}
+
+#[derive(Serialize, Deserialize)]
+struct OldConfigFile {
+    #[serde(default)]
+    feeds: IndexMap<String, FeedEntry>,
+    #[serde(default)]
     settings: Settings,
 }
 
@@ -61,6 +75,7 @@ impl Config {
         let path = Self::config_path()?;
         let content = fs::read_to_string(path).ok()?;
 
+        // Try new flat format first
         if let Ok(config_file) = serde_yaml::from_str::<ConfigFile>(&content) {
             let sources = config_file
                 .feeds
@@ -76,10 +91,36 @@ impl Config {
                 .collect();
             return Some(Config {
                 sources,
-                settings: config_file.settings,
+                settings: Settings {
+                    invidious: config_file.invidious,
+                    invidious_instance: config_file.invidious_instance,
+                    show_tooltips: config_file.show_tooltips,
+                    paywall_remover: config_file.paywall_remover,
+                },
             });
         }
 
+        // Try old nested format for backward compatibility
+        if let Ok(old_config) = serde_yaml::from_str::<OldConfigFile>(&content) {
+            let sources = old_config
+                .feeds
+                .into_iter()
+                .map(|(name, entry)| match entry {
+                    FeedEntry::Simple(url) => FeedSource {
+                        name,
+                        url,
+                        tags: Vec::new(),
+                    },
+                    FeedEntry::WithTags { url, tags } => FeedSource { name, url, tags },
+                })
+                .collect();
+            return Some(Config {
+                sources,
+                settings: old_config.settings,
+            });
+        }
+
+        // Fall back to simple feeds-only format
         let map: IndexMap<String, String> = serde_yaml::from_str(&content).ok()?;
         let sources = map
             .into_iter()
@@ -114,12 +155,10 @@ impl Config {
                 .collect();
             let config_file = ConfigFile {
                 feeds,
-                settings: Settings {
-                    invidious: self.settings.invidious,
-                    invidious_instance: self.settings.invidious_instance.clone(),
-                    show_tooltips: self.settings.show_tooltips,
-                    paywall_remover: self.settings.paywall_remover,
-                },
+                invidious: self.settings.invidious,
+                invidious_instance: self.settings.invidious_instance.clone(),
+                show_tooltips: self.settings.show_tooltips,
+                paywall_remover: self.settings.paywall_remover,
             };
             if let Ok(content) = serde_yaml::to_string(&config_file) {
                 let _ = fs::write(path, content);
