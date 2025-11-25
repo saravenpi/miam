@@ -81,27 +81,49 @@ fn fetch_direct(url_str: &str, user_agent: Option<&str>, timeout_secs: u64) -> R
 }
 
 fn html_to_text(html: &str) -> String {
-    // Simple regex-based approach for better performance
-    use regex::Regex;
+    // Simple string-based approach for better reliability
+    let mut text = html.to_string();
 
-    // Remove script and style tags with content
-    let script_style_re = Regex::new(r"(?is)<(script|style)[^>]*>.*?</\1>").unwrap();
-    let mut text = script_style_re.replace_all(html, "").to_string();
+    // Remove script tags with content (simple string search)
+    while let Some(start) = text.find("<script") {
+        if let Some(end) = text[start..].find("</script>") {
+            text.replace_range(start..start + end + 9, "");
+        } else {
+            break;
+        }
+    }
+
+    // Remove style tags with content
+    while let Some(start) = text.find("<style") {
+        if let Some(end) = text[start..].find("</style>") {
+            text.replace_range(start..start + end + 8, "");
+        } else {
+            break;
+        }
+    }
 
     // Add spacing for block elements
-    let block_re = Regex::new(r"(?i)</(p|div|h[1-6]|li|blockquote)>").unwrap();
-    text = block_re.replace_all(&text, "\n").to_string();
+    for tag in &["</p>", "</div>", "</h1>", "</h2>", "</h3>", "</h4>", "</h5>", "</h6>", "</li>", "</blockquote>"] {
+        text = text.replace(tag, "\n");
+    }
 
     // Add bullet for list items
-    let li_re = Regex::new(r"(?i)<li[^>]*>").unwrap();
-    text = li_re.replace_all(&text, "\n• ").to_string();
+    text = text.replace("<li>", "\n• ").replace("<li ", "\n• <");
 
-    // Remove all remaining HTML tags
-    let tag_re = Regex::new(r"<[^>]+>").unwrap();
-    text = tag_re.replace_all(&text, "").to_string();
+    // Remove all remaining HTML tags (simple character-by-character)
+    let mut result = String::with_capacity(text.len());
+    let mut in_tag = false;
+    for c in text.chars() {
+        match c {
+            '<' => in_tag = true,
+            '>' => in_tag = false,
+            _ if !in_tag => result.push(c),
+            _ => {}
+        }
+    }
 
     // Decode common HTML entities
-    text = text
+    result = result
         .replace("&nbsp;", " ")
         .replace("&amp;", "&")
         .replace("&lt;", "<")
@@ -117,9 +139,10 @@ fn html_to_text(html: &str) -> String {
         .replace("&lsquo;", "\u{2018}")
         .replace("&rsquo;", "\u{2019}");
 
-    // Collapse multiple newlines and trim
-    let whitespace_re = Regex::new(r"\n{3,}").unwrap();
-    text = whitespace_re.replace_all(&text, "\n\n").to_string();
+    // Collapse multiple newlines
+    while result.contains("\n\n\n") {
+        result = result.replace("\n\n\n", "\n\n");
+    }
 
-    text.trim().to_string()
+    result.trim().to_string()
 }
