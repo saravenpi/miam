@@ -48,19 +48,51 @@ fn render_feeds_list(f: &mut Frame, app: &App, area: Rect) {
     let is_focused = app.focus == Focus::Feeds;
     let mut items: Vec<ListItem> = Vec::new();
 
+    let mut offset = 0;
+
     if app.show_all && app.filter.is_empty() {
-        let selected = app.feed_index == 0;
+        let selected = app.feed_index == offset;
         let style = if selected {
             Style::default().fg(SECONDARY).bg(SELECTED_BG)
         } else {
             Style::default().fg(SECONDARY)
         };
         items.push(ListItem::new("  ★ All").style(style));
+        offset += 1;
+    }
+
+    if app.filter.is_empty() {
+        let selected = app.feed_index == offset;
+        let style = if selected {
+            Style::default().fg(Color::Red).bg(SELECTED_BG)
+        } else {
+            Style::default().fg(Color::Red)
+        };
+        items.push(ListItem::new("  ❤ Liked").style(style));
+        offset += 1;
+
+        let selected_articles = app.feed_index == offset;
+        let article_style = if selected_articles {
+            Style::default().fg(Color::Rgb(100, 149, 237)).bg(SELECTED_BG)
+        } else {
+            Style::default().fg(Color::Rgb(100, 149, 237))
+        };
+        items.push(ListItem::new("  \u{f15c} Articles").style(article_style));
+        offset += 1;
+
+        let selected_videos = app.feed_index == offset;
+        let video_style = if selected_videos {
+            Style::default().fg(Color::Rgb(255, 99, 71)).bg(SELECTED_BG)
+        } else {
+            Style::default().fg(Color::Rgb(255, 99, 71))
+        };
+        items.push(ListItem::new("  \u{f03d} Videos").style(video_style));
+        offset += 1;
     }
 
     let filtered_sources = app.get_filtered_sources();
     for (display_idx, (_, source)) in filtered_sources.iter().enumerate() {
-        let idx = if app.show_all && app.filter.is_empty() { display_idx + 1 } else { display_idx };
+        let idx = display_idx + offset;
         let selected = idx == app.feed_index;
         let icon = feed_icon(&source.url);
         let style = if selected {
@@ -76,10 +108,12 @@ fn render_feeds_list(f: &mut Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(if is_focused { PRIMARY } else { DIM }));
 
+    let mut list_state = app.feed_list_state.clone();
+
     let feeds_list = List::new(items)
         .block(feeds_block)
         .highlight_style(Style::default());
-    f.render_stateful_widget(feeds_list, area, &mut app.feed_list_state.clone());
+    f.render_stateful_widget(feeds_list, area, &mut list_state);
 }
 
 fn render_tags_list(f: &mut Frame, app: &App, area: Rect) {
@@ -103,10 +137,12 @@ fn render_tags_list(f: &mut Frame, app: &App, area: Rect) {
         .borders(Borders::ALL)
         .border_style(Style::default().fg(if is_focused { PRIMARY } else { DIM }));
 
+    let mut list_state = app.tag_list_state.clone();
+
     let tags_list = List::new(items)
         .block(tags_block)
         .highlight_style(Style::default());
-    f.render_stateful_widget(tags_list, area, &mut app.tag_list_state.clone());
+    f.render_stateful_widget(tags_list, area, &mut list_state);
 }
 
 fn render_help(f: &mut Frame, app: &App, area: Rect) {
@@ -120,7 +156,9 @@ fn render_help(f: &mut Frame, app: &App, area: Rect) {
             Span::styled("t", Style::default().fg(SUCCESS)),
             Span::raw(" tag "),
             Span::styled("r", Style::default().fg(SUCCESS)),
-            Span::raw(" refresh"),
+            Span::raw(" refresh "),
+            Span::styled("l", Style::default().fg(SUCCESS)),
+            Span::raw(" like"),
         ]),
     ])
     .block(Block::default().borders(Borders::ALL).border_style(Style::default().fg(DIM)));

@@ -80,31 +80,38 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
             let selected = display_idx == app.item_index;
             let date = item.date.format("%m/%d").to_string();
             let relative = time_ago(&item.date);
+
+            let text_color = if item.seen { DIM } else { Color::White };
             let style = if selected {
                 Style::default().fg(Color::White).bg(SELECTED_BG)
             } else {
-                Style::default().fg(Color::White)
+                Style::default().fg(text_color)
             };
 
             let icon = item.link.as_ref().map(|l| feed_icon(l)).unwrap_or('\u{f15c}');
             let available_width = area.width.saturating_sub(6) as usize;
             let title = truncate(&item.title, available_width);
 
-            let first_line = Line::from(vec![
-                Span::raw("  "),
-                Span::styled(format!("{} ", icon), Style::default().fg(SECONDARY)),
-                Span::raw(title),
-            ]);
+            let icon_color = if item.seen { DIM } else { SECONDARY };
+            let mut first_line_spans = vec![Span::raw("  ")];
+
+            if item.liked {
+                first_line_spans.push(Span::styled("❤ ", Style::default().fg(Color::Red)));
+            }
+
+            first_line_spans.push(Span::styled(format!("{} ", icon), Style::default().fg(icon_color)));
+            first_line_spans.push(Span::raw(title));
+
+            let first_line = Line::from(first_line_spans);
 
             let video_type = if item.is_youtube_short {
-                " • 📱 Short"
+                " • Short"
             } else if item.link.as_ref().map(|l| l.contains("youtube.com") || l.contains("youtu.be")).unwrap_or(false) {
                 " • Video"
             } else {
                 ""
             };
 
-            // Calculate available width for source name
             let fixed_parts = format!("    {} • {}{} • ", date, relative, video_type);
             let fixed_width = fixed_parts.len();
             let available_width = area.width.saturating_sub(6) as usize;
@@ -117,9 +124,8 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
             };
 
             let metadata = format!("{}{}", fixed_parts, source_display);
-            let short_color = if item.is_youtube_short { Color::Rgb(255, 165, 0) } else { DIM };
             let second_line = Line::from(vec![
-                Span::styled(metadata, Style::default().fg(short_color)),
+                Span::styled(metadata, Style::default().fg(DIM)),
             ]);
 
             ListItem::new(vec![first_line, second_line])
@@ -132,10 +138,12 @@ fn render_items_list(f: &mut Frame, app: &App, area: Rect, feed_title: String, i
         .borders(Borders::ALL)
         .border_style(Style::default().fg(if is_focused { PRIMARY } else { DIM }));
 
+    let mut list_state = app.item_list_state.clone();
+
     let items_list = List::new(items)
         .block(items_block)
         .highlight_style(Style::default());
-    f.render_stateful_widget(items_list, area, &mut app.item_list_state.clone());
+    f.render_stateful_widget(items_list, area, &mut list_state);
 }
 
 fn render_status(f: &mut Frame, app: &App, area: Rect) {

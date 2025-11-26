@@ -20,6 +20,10 @@ pub struct FeedItem {
     pub source_name: String,
     #[serde(default)]
     pub is_youtube_short: bool,
+    #[serde(skip)]
+    pub seen: bool,
+    #[serde(skip)]
+    pub liked: bool,
 }
 
 fn create_client() -> Result<Client> {
@@ -129,6 +133,8 @@ fn parse_rss(content: &[u8]) -> Result<Vec<FeedItem>> {
                 date,
                 source_name: source_name.clone(),
                 is_youtube_short,
+                seen: false,
+                liked: false,
             }
         })
         .collect();
@@ -163,6 +169,8 @@ fn parse_atom(content: &[u8]) -> Result<Vec<FeedItem>> {
                 date,
                 source_name: source_name.clone(),
                 is_youtube_short,
+                seen: false,
+                liked: false,
             }
         })
         .collect();

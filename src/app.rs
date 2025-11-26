@@ -1,6 +1,8 @@
 use crate::config::Config;
 use crate::feed::{FeedItem, FeedSource};
+use crate::likes::LikesStatus;
 use crate::reader::Article;
+use crate::seen::SeenStatus;
 use std::collections::HashSet;
 
 #[derive(Clone, Copy, PartialEq)]
@@ -23,6 +25,9 @@ pub struct App {
     pub input_mode: bool,
     pub status: String,
     pub show_all: bool,
+    pub show_liked: bool,
+    pub show_articles: bool,
+    pub show_videos: bool,
     pub loading: bool,
     pub spinner_frame: usize,
     pub feed_list_state: ListState,
@@ -47,6 +52,8 @@ pub struct App {
     pub browser_command: Option<String>,
     pub hide_shorts: bool,
     pub current_feed: Option<String>,
+    pub seen_status: SeenStatus,
+    pub likes_status: LikesStatus,
 }
 
 impl App {
@@ -68,6 +75,9 @@ impl App {
             input_mode: false,
             status: String::new(),
             show_all: true,
+            show_liked: false,
+            show_articles: false,
+            show_videos: false,
             loading: false,
             spinner_frame: 0,
             feed_list_state,
@@ -92,6 +102,8 @@ impl App {
             browser_command: None,
             hide_shorts: false,
             current_feed: None,
+            seen_status: SeenStatus::load().unwrap_or_default(),
+            likes_status: LikesStatus::load().unwrap_or_default(),
         }
     }
 
@@ -185,11 +197,17 @@ impl App {
             self.get_filtered_sources().len()
         };
 
+        let mut offset = 0;
         if self.show_all && self.filter.is_empty() {
-            filtered_count + 1
-        } else {
-            filtered_count
+            offset += 1;
         }
+        if self.filter.is_empty() {
+            offset += 1;
+            offset += 1;
+            offset += 1;
+        }
+
+        filtered_count + offset
     }
 
     fn item_list_len(&self) -> usize {
@@ -370,20 +388,40 @@ impl App {
             items.retain(|(_, item)| !item.is_youtube_short);
         }
 
+        if self.show_liked {
+            items.retain(|(_, item)| item.liked);
+        }
+
+        if self.show_articles {
+            items.retain(|(_, item)| self.is_article_item(item));
+        }
+
+        if self.show_videos {
+            items.retain(|(_, item)| self.is_video_item(item));
+        }
+
         items
     }
 
     pub fn delete_selected(&mut self) {
         if self.focus == Focus::Feeds {
-            if self.show_all && self.feed_index == 0 && self.filter.is_empty() {
-                return;
+            let mut offset = 0;
+            if self.show_all && self.filter.is_empty() {
+                if self.feed_index == 0 {
+                    return;
+                }
+                offset += 1;
+            }
+            if self.filter.is_empty() {
+                if self.feed_index == offset || self.feed_index == offset + 1 || self.feed_index == offset + 2 {
+                    return;
+                }
+                offset += 1;
+                offset += 1;
+                offset += 1;
             }
             let filtered_sources = self.get_filtered_sources();
-            let display_idx = if self.show_all && self.filter.is_empty() {
-                self.feed_index - 1
-            } else {
-                self.feed_index
-            };
+            let display_idx = self.feed_index - offset;
             if display_idx < filtered_sources.len() {
                 let (original_idx, _) = filtered_sources[display_idx];
                 self.sources.remove(original_idx);
@@ -403,8 +441,14 @@ impl App {
     }
 
     pub fn open_url(&self, url: &str) {
+        use std::process::Stdio;
+
         if let Some(browser_cmd) = &self.browser_command {
-            let _ = std::process::Command::new(browser_cmd).arg(url).spawn();
+            let _ = std::process::Command::new(browser_cmd)
+                .arg(url)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn();
         } else {
             #[cfg(target_os = "macos")]
             let opener = "open";
@@ -413,7 +457,11 @@ impl App {
             #[cfg(target_os = "windows")]
             let opener = "start";
 
-            let _ = std::process::Command::new(opener).arg(url).spawn();
+            let _ = std::process::Command::new(opener)
+                .arg(url)
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .spawn();
         }
     }
 
@@ -426,6 +474,7 @@ impl App {
                     } else {
                         link.clone()
                     };
+                    self.mark_selected_as_seen();
                     self.open_url(&url);
                 }
             }
@@ -480,6 +529,18 @@ impl App {
         url.contains("youtube.com") || url.contains("youtu.be")
     }
 
+    fn is_video_item(&self, item: &FeedItem) -> bool {
+        if let Some(link) = &item.link {
+            self.is_youtube_link(link) || link.contains("vimeo.com") || link.contains("dailymotion.com")
+        } else {
+            false
+        }
+    }
+
+    fn is_article_item(&self, item: &FeedItem) -> bool {
+        !self.is_video_item(item)
+    }
+
     fn convert_to_invidious(&self, url: &str) -> String {
         if url.contains("youtube.com/watch?v=") {
             if let Some(video_id) = url.split("v=").nth(1) {
@@ -518,15 +579,23 @@ impl App {
 
     pub fn start_tag_editor(&mut self) {
         if self.focus == Focus::Feeds {
-            if self.show_all && self.feed_index == 0 && self.filter.is_empty() {
-                return;
+            let mut offset = 0;
+            if self.show_all && self.filter.is_empty() {
+                if self.feed_index == 0 {
+                    return;
+                }
+                offset += 1;
+            }
+            if self.filter.is_empty() {
+                if self.feed_index == offset || self.feed_index == offset + 1 || self.feed_index == offset + 2 {
+                    return;
+                }
+                offset += 1;
+                offset += 1;
+                offset += 1;
             }
             let filtered_sources = self.get_filtered_sources();
-            let display_idx = if self.show_all && self.filter.is_empty() {
-                self.feed_index - 1
-            } else {
-                self.feed_index
-            };
+            let display_idx = self.feed_index - offset;
 
             if display_idx < filtered_sources.len() {
                 let (original_idx, _) = filtered_sources[display_idx];
@@ -579,11 +648,16 @@ impl App {
             return;
         }
         let filtered_sources = self.get_filtered_sources();
-        let display_idx = if self.show_all && self.filter.is_empty() {
-            self.feed_index - 1
-        } else {
-            self.feed_index
-        };
+        let mut offset = 0;
+        if self.show_all && self.filter.is_empty() {
+            offset += 1;
+        }
+        if self.filter.is_empty() {
+            offset += 1;
+            offset += 1;
+            offset += 1;
+        }
+        let display_idx = self.feed_index - offset;
 
         if display_idx < filtered_sources.len() {
             let (original_idx, _) = filtered_sources[display_idx];
@@ -635,5 +709,61 @@ impl App {
             .iter()
             .filter(|s| s.tags.contains(&tag.to_string()))
             .collect()
+    }
+
+    pub fn update_items_seen_status(&mut self) {
+        for item in &mut self.items {
+            let identifier = crate::seen::get_item_identifier(&item.link, &item.title);
+            item.seen = self.seen_status.is_seen(&identifier);
+        }
+    }
+
+    pub fn mark_selected_as_seen(&mut self) {
+        let identifier = self.get_selected_item().map(|item| {
+            crate::seen::get_item_identifier(&item.link, &item.title)
+        });
+
+        if let Some(id) = identifier {
+            self.seen_status.mark_seen(&id);
+            if let Err(e) = self.seen_status.save() {
+                self.status = format!("Failed to save seen status: {}", e);
+            }
+            self.update_items_seen_status();
+        }
+    }
+
+    pub fn update_items_like_status(&mut self) {
+        for item in &mut self.items {
+            let identifier = crate::likes::get_item_identifier(&item.link, &item.title);
+            item.liked = self.likes_status.is_liked(&identifier);
+        }
+    }
+
+    pub fn toggle_selected_like(&mut self) {
+        let identifier = self.get_selected_item().map(|item| {
+            crate::likes::get_item_identifier(&item.link, &item.title)
+        });
+
+        if let Some(id) = identifier {
+            let is_liked = self.likes_status.toggle_like(&id);
+            if let Err(e) = self.likes_status.save() {
+                self.status = format!("Failed to save like status: {}", e);
+            } else {
+                self.status = if is_liked {
+                    "Item liked!".to_string()
+                } else {
+                    "Item unliked!".to_string()
+                };
+            }
+            self.update_items_like_status();
+        }
+    }
+
+    pub fn load_liked_items(&mut self) {
+        self.items = crate::cache::load_all_cached();
+        self.update_items_seen_status();
+        self.update_items_like_status();
+        self.item_index = 0;
+        self.item_list_state.select(Some(0));
     }
 }

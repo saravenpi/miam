@@ -2,7 +2,9 @@ mod app;
 mod cache;
 mod config;
 mod feed;
+mod likes;
 mod reader;
+mod seen;
 mod ui;
 
 use anyhow::Result;
@@ -254,6 +256,8 @@ fn run_app<B: ratatui::backend::Backend>(
                 LoadResult::Items(items, feed_name) => {
                     if app.current_feed == feed_name {
                         app.items = items;
+                        app.update_items_seen_status();
+                        app.update_items_like_status();
                         app.loading = false;
                         app.background_loading = true;
                         app.item_index = 0;
@@ -265,6 +269,8 @@ fn run_app<B: ratatui::backend::Backend>(
                     if app.current_feed == feed_name {
                         let old_count = app.items.len();
                         app.items = items;
+                        app.update_items_seen_status();
+                        app.update_items_like_status();
                         app.background_loading = false;
                         let new_count = app.items.len();
                         if new_count > old_count {
@@ -374,8 +380,99 @@ fn run_app<B: ratatui::backend::Backend>(
                     }
                 } else if app.filter_mode {
                     match key.code {
-                        KeyCode::Enter => app.exit_filter(),
+                        KeyCode::Enter => {
+                            app.exit_filter();
+                            if app.focus == app::Focus::Feeds && !app.sources.is_empty() {
+                                let mut offset = 0;
+                                if app.show_all && app.filter.is_empty() {
+                                    offset += 1;
+                                }
+                                if app.filter.is_empty() {
+                                    offset += 1;
+                                    offset += 1;
+                                    offset += 1;
+                                }
+
+                                if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
+                                    app.loading = true;
+                                    app.status = "Loading all feeds...".to_string();
+                                    app.current_feed = None;
+                                    spawn_refresh_all(app.sources.clone(), tx.clone());
+                                    app.focus = app::Focus::Items;
+                                } else {
+                                    let filtered_sources = app.get_filtered_sources();
+                                    let display_idx = app.feed_index - offset;
+                                    if display_idx < filtered_sources.len() {
+                                        let (original_idx, _) = filtered_sources[display_idx];
+                                        let source = app.sources[original_idx].clone();
+                                        app.loading = true;
+                                        app.status = format!("Loading {}...", source.name);
+                                        app.current_feed = Some(source.name.clone());
+                                        spawn_refresh_single(source, tx.clone());
+                                        app.focus = app::Focus::Items;
+                                    } else {
+                                        app.status = format!("Error: Invalid feed index {} (max {})", display_idx, filtered_sources.len());
+                                    }
+                                }
+                            } else if app.focus == app::Focus::Tags {
+                                app.select_tag();
+                            } else if app.focus == app::Focus::Items {
+                                app.open_selected();
+                            }
+                        }
                         KeyCode::Esc => app.clear_filter(),
+                        KeyCode::Char('r') => {
+                            app.exit_filter();
+                            if !app.sources.is_empty() {
+                                if app.focus == app::Focus::Items && app.current_feed.is_some() {
+                                    let feed_name = app.current_feed.clone().unwrap();
+                                    if let Some(source) = app.sources.iter().find(|s| s.name == feed_name).cloned() {
+                                        app.loading = true;
+                                        app.status = format!("Refreshing {}...", source.name);
+                                        spawn_refresh_single(source, tx.clone());
+                                    } else {
+                                        app.status = "Cannot refresh: feed not found".to_string();
+                                    }
+                                } else if app.focus == app::Focus::Items && app.current_feed.is_none() {
+                                    app.loading = true;
+                                    app.status = "Refreshing all feeds...".to_string();
+                                    spawn_refresh_all(app.sources.clone(), tx.clone());
+                                } else {
+                                    let mut offset = 0;
+                                    if app.show_all && app.filter.is_empty() {
+                                        offset += 1;
+                                    }
+                                    let liked_index = offset;
+                                    if app.filter.is_empty() {
+                                        offset += 1;
+                                        offset += 1;
+                                        offset += 1;
+                                    }
+
+                                    if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
+                                        app.loading = true;
+                                        app.status = "Refreshing all feeds...".to_string();
+                                        app.current_feed = None;
+                                        spawn_refresh_all(app.sources.clone(), tx.clone());
+                                    } else if (app.feed_index == liked_index || app.feed_index == liked_index + 1 || app.feed_index == liked_index + 2) && app.filter.is_empty() {
+                                        app.status = "Special feeds don't need refresh".to_string();
+                                    } else {
+                                        let filtered_sources = app.get_filtered_sources();
+                                        let display_idx = app.feed_index - offset;
+                                        if display_idx < filtered_sources.len() {
+                                            let (original_idx, _) = filtered_sources[display_idx];
+                                            let source = app.sources[original_idx].clone();
+                                            app.loading = true;
+                                            app.status = format!("Refreshing {}...", source.name);
+                                            app.current_feed = Some(source.name.clone());
+                                            spawn_refresh_single(source, tx.clone());
+                                        } else {
+                                            app.status = format!("Error: Invalid feed index {} (max {})", display_idx, filtered_sources.len());
+                                        }
+                                    }
+                                }
+                            }
+                        }
                         KeyCode::Char(c) => {
                             app.filter.push(c);
                             match app.focus {
@@ -462,25 +559,62 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::BackTab => app.toggle_focus(),
                         KeyCode::Enter => {
                             if app.focus == app::Focus::Feeds && !app.sources.is_empty() {
+                                let mut offset = 0;
+                                if app.show_all && app.filter.is_empty() {
+                                    offset += 1;
+                                }
+                                let liked_index = offset;
+                                if app.filter.is_empty() {
+                                    offset += 1;
+                                    offset += 1;
+                                    offset += 1;
+                                }
+
                                 if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
                                     app.loading = true;
                                     app.status = "Loading all feeds...".to_string();
                                     app.current_feed = None;
+                                    app.show_liked = false;
+                                    app.show_articles = false;
+                                    app.show_videos = false;
                                     spawn_refresh_all(app.sources.clone(), tx.clone());
+                                    app.focus = app::Focus::Items;
+                                } else if app.feed_index == liked_index && app.filter.is_empty() {
+                                    app.show_liked = true;
+                                    app.show_articles = false;
+                                    app.show_videos = false;
+                                    app.status = "Showing liked items".to_string();
+                                    app.current_feed = None;
+                                    app.load_liked_items();
+                                    app.focus = app::Focus::Items;
+                                } else if app.feed_index == liked_index + 1 && app.filter.is_empty() {
+                                    app.show_liked = false;
+                                    app.show_articles = true;
+                                    app.show_videos = false;
+                                    app.status = "Showing articles only".to_string();
+                                    app.current_feed = None;
+                                    app.load_liked_items();
+                                    app.focus = app::Focus::Items;
+                                } else if app.feed_index == liked_index + 2 && app.filter.is_empty() {
+                                    app.show_liked = false;
+                                    app.show_articles = false;
+                                    app.show_videos = true;
+                                    app.status = "Showing videos only".to_string();
+                                    app.current_feed = None;
+                                    app.load_liked_items();
                                     app.focus = app::Focus::Items;
                                 } else {
                                     let filtered_sources = app.get_filtered_sources();
-                                    let display_idx = if app.show_all && app.filter.is_empty() {
-                                        app.feed_index - 1
-                                    } else {
-                                        app.feed_index
-                                    };
+                                    let display_idx = app.feed_index - offset;
                                     if display_idx < filtered_sources.len() {
                                         let (original_idx, _) = filtered_sources[display_idx];
                                         let source = app.sources[original_idx].clone();
                                         app.loading = true;
                                         app.status = format!("Loading {}...", source.name);
                                         app.current_feed = Some(source.name.clone());
+                                        app.show_liked = false;
+                                        app.show_articles = false;
+                                        app.show_videos = false;
                                         spawn_refresh_single(source, tx.clone());
                                         app.focus = app::Focus::Items;
                                     } else {
@@ -502,27 +636,51 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Char('d') => app.delete_selected(),
                         KeyCode::Char('r') => {
                             if !app.sources.is_empty() {
-                                if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
-                                    app.loading = true;
-                                    app.status = "Refreshing all feeds...".to_string();
-                                    app.current_feed = None;
-                                    spawn_refresh_all(app.sources.clone(), tx.clone());
-                                } else {
-                                    let filtered_sources = app.get_filtered_sources();
-                                    let display_idx = if app.show_all && app.filter.is_empty() {
-                                        app.feed_index - 1
-                                    } else {
-                                        app.feed_index
-                                    };
-                                    if display_idx < filtered_sources.len() {
-                                        let (original_idx, _) = filtered_sources[display_idx];
-                                        let source = app.sources[original_idx].clone();
+                                if app.focus == app::Focus::Items && app.current_feed.is_some() {
+                                    let feed_name = app.current_feed.clone().unwrap();
+                                    if let Some(source) = app.sources.iter().find(|s| s.name == feed_name).cloned() {
                                         app.loading = true;
                                         app.status = format!("Refreshing {}...", source.name);
-                                        app.current_feed = Some(source.name.clone());
                                         spawn_refresh_single(source, tx.clone());
                                     } else {
-                                        app.status = format!("Error: Invalid feed index {} (max {})", display_idx, filtered_sources.len());
+                                        app.status = "Cannot refresh: feed not found".to_string();
+                                    }
+                                } else if app.focus == app::Focus::Items && app.current_feed.is_none() {
+                                    app.loading = true;
+                                    app.status = "Refreshing all feeds...".to_string();
+                                    spawn_refresh_all(app.sources.clone(), tx.clone());
+                                } else {
+                                    let mut offset = 0;
+                                    if app.show_all && app.filter.is_empty() {
+                                        offset += 1;
+                                    }
+                                    let liked_index = offset;
+                                    if app.filter.is_empty() {
+                                        offset += 1;
+                                        offset += 1;
+                                        offset += 1;
+                                    }
+
+                                    if app.show_all && app.feed_index == 0 && app.filter.is_empty() {
+                                        app.loading = true;
+                                        app.status = "Refreshing all feeds...".to_string();
+                                        app.current_feed = None;
+                                        spawn_refresh_all(app.sources.clone(), tx.clone());
+                                    } else if (app.feed_index == liked_index || app.feed_index == liked_index + 1 || app.feed_index == liked_index + 2) && app.filter.is_empty() {
+                                        app.status = "Special feeds don't need refresh".to_string();
+                                    } else {
+                                        let filtered_sources = app.get_filtered_sources();
+                                        let display_idx = app.feed_index - offset;
+                                        if display_idx < filtered_sources.len() {
+                                            let (original_idx, _) = filtered_sources[display_idx];
+                                            let source = app.sources[original_idx].clone();
+                                            app.loading = true;
+                                            app.status = format!("Refreshing {}...", source.name);
+                                            app.current_feed = Some(source.name.clone());
+                                            spawn_refresh_single(source, tx.clone());
+                                        } else {
+                                            app.status = format!("Error: Invalid feed index {} (max {})", display_idx, filtered_sources.len());
+                                        }
                                     }
                                 }
                             }
@@ -530,12 +688,18 @@ fn run_app<B: ratatui::backend::Backend>(
                         KeyCode::Char('o') => {
                             if app.focus == app::Focus::Items && app.can_open_in_reader() {
                                 if let Some(url) = app.get_selected_url() {
+                                    app.mark_selected_as_seen();
                                     app.article_loading = true;
                                     app.status = "Loading article...".to_string();
                                     spawn_fetch_article(url, app.paywall_remover, tx.clone());
                                 }
                             } else {
                                 app.open_selected();
+                            }
+                        }
+                        KeyCode::Char('l') => {
+                            if app.focus == app::Focus::Items {
+                                app.toggle_selected_like();
                             }
                         }
                         _ => {}
